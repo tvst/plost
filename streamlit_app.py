@@ -41,7 +41,7 @@ data = get_datasets()
 """
 # Plost
 
-You've been writing "plots" wrong all this time.
+You've been writing _plots_ wrong all this time.
 """
 
 """
@@ -348,14 +348,3 @@ with st.echo():
         width=500,
         height=500,
         pan_zoom='minimap')
-
-
-
-"""
-# Bugs
-
-* Vega Lite charts don't recover from errors unless you reload
-* Some specs don't work. Vega Lite version?
-* Hide Streamlit's inner workings from stack traces. May be related to use of venv
-* PLEASE UPGRADE THE VEGA LITE VERSION!!!!
-"""
