@@ -5,12 +5,12 @@ import copy
 # Syntactic sugar to make VegaLite more fun.
 _ = dict
 
-# TODO: Improve stack='columns' bar chart API
 # TODO: If you don't pick an 'x' we use the 0th index
 # TODO: If you don't pick a 'y' we use the 1st column (or all the columns??)
 # TODO: Figure out why tooltip only shows on minimap
 # TODO: Only send the columns that are actually used. (Same in all other charts)
 # TODO: Ability to set x or y annotations
+# TODO: Show numbers in pie/donut charts.
 
 def _clean_encoding(data, enc, **kwargs):
     if isinstance(enc, str):
@@ -69,29 +69,35 @@ def _guess_string_encoding_type(data, enc):
     return enc, None
 
 
-def _maybe_melt(data, x, y, color, legend):
-    if color:
-        # Dataframe is already in long format.
-        value_enc = _clean_encoding(data, y)
-        variable_enc = _clean_encoding(data, color, legend=_get_legend_dict(legend))
+VAR_NAME = 'variable' # Singular because it makes tooltips nicer
+VALUE_NAME = 'value' # Singular because it makes tooltips nicer
+
+def _maybe_melt(data, x, y, legend):
+    melted = False
+
+    # Dataframe is in wide format. Need to convert to long format for Vega-Lite.
+    id_vars = [x]
+    value_vars = _as_list_like(y)
+
+    if len(value_vars) == 1:
+        value_enc = _clean_encoding(data, value_vars[0])
+        variable_enc = None
 
     else:
-        # Dataframe is in wide format. Need to convert to long format for Vega-Lite.
-        id_vars = [x]
-        value_vars = _as_list_like(y)
+        if VAR_NAME in data.columns:
+            raise TypeError(f'Data already contains a column called {VAR_NAME}')
+        if VALUE_NAME in data.columns:
+            raise TypeError(f'Data already contains a column called {VALUE_NAME}')
 
-        if len(value_vars) == 1:
-            value_enc = _clean_encoding(data, value_vars[0])
-            variable_enc = None
+        data = data.melt(
+            id_vars=id_vars, value_vars=value_vars, var_name=VAR_NAME, value_name=VALUE_NAME)
+        data[VAR_NAME] = data[VAR_NAME].astype('string')
 
-        else:
-            data = data.melt(id_vars=id_vars, value_vars=value_vars)
-            data['variable'] = data['variable'].astype('string')
+        value_enc = _clean_encoding(data, VALUE_NAME, title=None)
+        variable_enc = _(field=VAR_NAME, title=None, legend=_get_legend_dict(legend))
+        melted = True
 
-            value_enc = _clean_encoding(data, 'value', title=None)
-            variable_enc = _(field='variable', title=None, legend=_get_legend_dict(legend))
-
-    return data, value_enc, variable_enc
+    return melted, data, value_enc, variable_enc
 
 
 def _as_list_like(x):
@@ -196,7 +202,7 @@ def _add_minimap(orig_spec, encodings, location, filter=False):
     return outer_spec
 
 
-def line(
+def line_chart(
         data,
         x,
         y,
@@ -246,7 +252,10 @@ def line(
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
-    data, y_enc, color_enc = _maybe_melt(data, x, y, color, legend)
+    melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend)
+
+    if color:
+        color_enc = _clean_encoding(data, color)
 
     spec = _(
         data=data,
@@ -269,7 +278,7 @@ def line(
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
 
-def area(
+def area_chart(
         data,
         x,
         y,
@@ -283,7 +292,10 @@ def area(
         pan_zoom='both',
         use_container_width=True,
     ):
-    data, y_enc, color_enc = _maybe_melt(data, x, y, color, legend)
+    melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend)
+
+    if color:
+        color_enc = _clean_encoding(data, color)
 
     if stack is not None:
         if stack is True:
@@ -312,13 +324,14 @@ def area(
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
 
-def bar(
+def bar_chart(
         data,
-        bars,
-        values,
+        bar,
+        value,
         color=None,
         opacity=None,
-        stack='columns',
+        group=None,
+        stack=True,
         direction='vertical',
         width=None,
         height=None,
@@ -327,26 +340,41 @@ def bar(
         pan_zoom=None,
         use_container_width=False,
     ):
-    x_enc = _clean_encoding(data, bars, title=None)
-    values = _as_list_like(values)
-    data, y_enc, color_enc = _maybe_melt(data, bars, values, color, legend)
+    x_enc = _clean_encoding(data, bar, title=None)
+    value = _as_list_like(value)
+    melted, data, y_enc, color_enc = _maybe_melt(data, bar, value, legend)
+
+    if color:
+        if color == 'value': # 'value', as in the value= arg.
+            color = VAR_NAME
+        color_enc = _clean_encoding(data, color)
 
     column_enc = None
+    row_enc = None
 
-    if not stack:
-        y_enc['stack'] = None
-    elif stack is True:
-        y_enc['stack'] = 'zero'
-    elif stack is 'columns':
-        if (len(values) > 1 or color):
+    if group:
+        if group is True:
+            if not melted:
+                raise Exception("bar(..., group=True) requires wide-mode data.")
             column_enc = x_enc
-            column_enc['spacing'] = 10
             x_enc = color_enc
-    else:
-        y_enc['stack'] = stack
+        else:
+            if group == 'value': # 'value', as in the value= arg.
+                group = VAR_NAME
+            column_enc = _clean_encoding(data, group, title=None)
+
+        column_enc['spacing'] = 10
+
+    if stack:
+        if stack is True:
+            y_enc['stack'] = 'zero'
+
+        else:
+            y_enc['stack'] = stack
 
     if direction == 'horizontal':
         x_enc, y_enc = y_enc, x_enc
+        row_enc, column_enc = column_enc, row_enc
         use_container_width = True
 
     spec = _(
@@ -361,6 +389,7 @@ def bar(
             color=color_enc,
             opacity=_clean_encoding(data, opacity),
             column=column_enc,
+            row=row_enc,
         ),
     )
 
@@ -377,7 +406,7 @@ def bar(
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
 
-def scatter(
+def scatter_chart(
         data,
         x,
         y,
@@ -438,7 +467,7 @@ def _pie_spec(
 
 
 
-def pie(
+def pie_chart(
         data,
         theta,
         color,
@@ -462,7 +491,7 @@ def pie(
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
 
-def donut(
+def donut_chart(
         data,
         theta,
         color,

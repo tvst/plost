@@ -48,10 +48,10 @@ You've been writing "plots" wrong all this time.
 ## The basics
 """
 
-"### line()"
+"### line_chart()"
 
 with st.echo():
-    plost.line(
+    plost.line_chart(
         data['rand'],
         x='a',
         y='b')
@@ -59,17 +59,17 @@ with st.echo():
 ""
 
 with st.echo():
-    plost.line(
+    plost.line_chart(
         data['rand'],
         x='a',
         y=('b', 'c'))
 
 "---"
 
-"### area()"
+"### area_chart()"
 
 with st.echo():
-    plost.area(
+    plost.area_chart(
         data['rand'],
         x='a',
         y=('b', 'c'))
@@ -77,7 +77,7 @@ with st.echo():
 ""
 
 with st.echo():
-    plost.area(
+    plost.area_chart(
         data['rand'],
         x='a',
         y=('b', 'c'),
@@ -87,7 +87,7 @@ with st.echo():
 ""
 
 with st.echo():
-    plost.area(
+    plost.area_chart(
         data['rand'],
         x='a',
         y=('b', 'c'),
@@ -96,7 +96,7 @@ with st.echo():
 ""
 
 with st.echo():
-    plost.area(
+    plost.area_chart(
         data['seattle'],
         x=dict(field='date', timeUnit='month'),
         y=dict(field='temp_max', aggregate='mean'),
@@ -105,85 +105,86 @@ with st.echo():
 
 "---"
 
-"### bar()"
+"### bar_chart()"
 
 with st.echo():
-    plost.bar(
+    plost.bar_chart(
         data['stocks'],
-        bars='company',
-        values='q2')
+        bar='company',
+        value='q2')
 
 ""
 
 with st.echo():
-    plost.bar(
+    plost.bar_chart(
         data['stocks'],
-        bars='company',
-        values='q2',
+        bar='company',
+        value='q2',
         direction='horizontal')
 
 ""
 
 with st.echo():
-    plost.bar(
+    plost.bar_chart(
         data['stocks'],
-        bars='company',
-        values=['q2', 'q3'],
+        bar='company',
+        value=['q2', 'q3'],
     )
 
 ""
 
 with st.echo():
-    plost.bar(
+    plost.bar_chart(
         data['stocks'],
-        bars='company',
-        values=['q2', 'q3'],
-        stack=True)
-
-""
-
-with st.echo():
-    plost.bar(
-        data['stocks'],
-        bars='company',
-        values=['q2', 'q3'],
+        bar='company',
+        value=['q2', 'q3'],
         stack='normalize')
+
 ""
 
 with st.echo():
-    plost.bar(
+    plost.bar_chart(
         data['stocks'],
-        bars='company',
-        values=['q2', 'q3'],
-        stack=False,
-        opacity=0.5)
+        bar='company',
+        value=['q2', 'q3'],
+        group=True)
+""
+
+with st.echo():
+    plost.bar_chart(
+        data['stocks'],
+        bar='company',
+        value=['q2', 'q3'],
+        group='value',
+        color='company',
+    )
 
 "---"
 
-"### pie()"
+"### pie_chart()"
 
 with st.echo():
-    plost.pie(
+    plost.pie_chart(
         data['stocks'],
         theta='q2',
         color='company')
 
 "---"
 
-"### arc()"
+"### donut_chart()"
 
 with st.echo():
-    plost.donut(
+    plost.donut_chart(
         data['stocks'],
         theta='q2',
         color='company')
 
 "---"
 
-"### scatter()"
+"### scatter_chart()"
 
 with st.echo():
-    plost.scatter(
+    plost.scatter_chart(
         data['randn'],
         x='a',
         y='b',
@@ -296,7 +297,7 @@ with st.echo():
 """
 
 with st.echo():
-    plost.line(
+    plost.line_chart(
         data['sp500'],
         x='date:T',
         y='price',
@@ -306,7 +307,7 @@ with st.echo():
 "---"
 
 with st.echo():
-    plost.area(
+    plost.area_chart(
         data['sp500'],
         x='date:T',
         y='price',
@@ -316,7 +317,7 @@ with st.echo():
 "---"
 
 with st.echo():
-    plost.scatter(
+    plost.scatter_chart(
         data['randn'],
         x='a',
         y='b',
@@ -329,20 +330,20 @@ with st.echo():
 "---"
 
 with st.echo():
-    plost.bar(
+    plost.bar_chart(
         data['pageviews'],
-        bars='pagenum',
-        values='pageviews',
+        bar='pagenum',
+        value='pageviews',
         width=500,
         pan_zoom='minimap')
 
 "---"
 
 with st.echo():
-    plost.bar(
+    plost.bar_chart(
         data['pageviews'],
-        bars='pagenum',
-        values='pageviews',
+        bar='pagenum',
+        value='pageviews',
         direction='horizontal',
         width=500,
         height=500,
