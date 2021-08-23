@@ -4,7 +4,7 @@ A deceptively simple plotting library for [Streamlit](https://github.com/streaml
 
 Docs and Python package coming soon! In the meantime, here are some live samples with code:
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/streamlit/plost)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/tvst/plost)
 
 ## Why the name
 
