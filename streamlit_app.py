@@ -5,35 +5,43 @@ import plost
 
 @st.cache
 def get_datasets():
-    data = dict(
-        seattle=pd.read_csv('./data/seattle-weather.csv'),
-        sp500=pd.read_csv('./data/sp500.csv'),
-        randn=pd.DataFrame(
-            np.random.randn(500, 3),
-            columns=['a', 'b', 'c'],
-        ),
-        rand=pd.DataFrame(
-            np.random.rand(100, 3),
-            columns=['a', 'b', 'c'],
-        ),
-        stocks=pd.DataFrame(dict(
-            company=['goog', 'fb', 'ms', 'amazon'],
-            q2=[4, 6, 8, 2],
-            q3=[2, 5, 2, 6],
-        )),
-        pageviews=pd.DataFrame(dict(
-            pagenum=[f'page-{i:03d}' for i in range(200)],
-        )),
-        events=pd.DataFrame(
-            np.random.randn(500, 1),
-            columns=['time'],
-        ),
+    N = 50
+    rand = pd.DataFrame()
+    rand['a'] = np.arange(N)
+    rand['b'] = np.random.rand(N)
+    rand['c'] = np.random.rand(N)
+
+    N = 500
+    events = pd.DataFrame()
+    events['time'] = np.random.randn(N)
+    events['servers'] = np.random.choice(['server 1', 'server 2', 'server 3'], N)
+
+    N = 500
+    randn = pd.DataFrame(
+        np.random.randn(N, 3),
+        columns=['a', 'b', 'c'],
     )
 
-    data['pageviews']['pageviews'] = np.random.randint(0, 1000, data['pageviews'].shape[0])
-    data['events']['servers'] = np.random.choice(['server 1', 'server 2', 'server 3'], data['events'].shape[0])
+    stocks = pd.DataFrame(dict(
+        company=['goog', 'fb', 'ms', 'amazon'],
+        q2=[4, 6, 8, 2],
+        q3=[2, 5, 2, 6],
+    ))
 
-    return data
+    N = 200
+    pageviews = pd.DataFrame()
+    pageviews['pagenum'] = [f'page-{i:03d}' for i in range(N)]
+    pageviews['pageviews'] = np.random.randint(0, 1000, N)
+
+    return dict(
+        seattle=pd.read_csv('./data/seattle-weather.csv'),
+        sp500=pd.read_csv('./data/sp500.csv'),
+        randn=randn,
+        rand=rand,
+        stocks=stocks,
+        pageviews=pageviews,
+        events=events,
+    )
 
 
 data = get_datasets()
@@ -200,8 +208,7 @@ with st.echo():
     plost.event_chart(
         data['events'],
         x='time',
-        y='servers',
-        color='#ff3322')
+        y='servers')
 
 ""
 
