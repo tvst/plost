@@ -47,9 +47,9 @@ def get_datasets():
 data = get_datasets()
 
 """
-# Plost
+# 🍅 Plost
 
-You've been writing _plots_ wrong all this time.
+You've been writing plots wrong all this time.
 
 ---
 
