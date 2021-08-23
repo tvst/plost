@@ -1,4 +1,4 @@
-# plost
+# Plost
 
 A deceptively simple plotting library for [Streamlit](https://github.com/streamlit/streamlit).
 
