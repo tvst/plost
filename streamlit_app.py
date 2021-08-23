@@ -34,13 +34,13 @@ def get_datasets():
     pageviews['pageviews'] = np.random.randint(0, 1000, N)
 
     return dict(
+        rand=rand,
+        randn=randn,
+        events=events,
+        pageviews=pageviews,
+        stocks=stocks,
         seattle=pd.read_csv('./data/seattle-weather.csv'),
         sp500=pd.read_csv('./data/sp500.csv'),
-        randn=randn,
-        rand=rand,
-        stocks=stocks,
-        pageviews=pageviews,
-        events=events,
     )
 
 
@@ -50,9 +50,22 @@ data = get_datasets()
 # Plost
 
 You've been writing _plots_ wrong all this time.
+
+---
+
+## Datasets used for these examples
+
+Let's say you have some datasets like these:
 """
 
+dataset_name = st.selectbox("Datasets", data)
+st.write(data[dataset_name])
+
 """
+Now let's take this data and go plost some plosts!
+
+---
+
 ## The basics
 """
 
@@ -221,6 +234,8 @@ with st.echo():
         legend='disable')
 
 """
+---
+
 ## Histograms
 """
 
@@ -300,6 +315,8 @@ with st.echo():
         height=500)
 
 """
+---
+
 ## Minimaps
 """
 
