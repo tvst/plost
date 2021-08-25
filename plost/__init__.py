@@ -812,8 +812,8 @@ def time_hist(
         height=height,
         title=title,
         encoding=_(
-            x=_clean_encoding(data, date, timeUnit=x_unit, title=None, axis=_(tickBand='extent')),
-            y=_clean_encoding(data, date, timeUnit=y_unit, title=None, axis=_(tickBand='extent')),
+            x=_(field=date, type='ordinal', timeUnit=x_unit, title=None, axis=_(tickBand='extent')),
+            y=_(field=date, type='ordinal', timeUnit=y_unit, title=None, axis=_(tickBand='extent')),
             color=_clean_encoding(data, color, aggregate=aggregate, legend=legend)
         ),
         selection=_get_selection(pan_zoom),
