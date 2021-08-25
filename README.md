@@ -2,9 +2,17 @@
 
 A deceptively simple plotting library for [Streamlit](https://github.com/streamlit/streamlit).
 
-Docs and Python package coming soon! In the meantime, here are some live samples with code:
+Demo: [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/tvst/plost)
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/tvst/plost)
+## Installation
+
+```
+pip install plost
+```
+
+## Getting started
+
+Docs and tests coming soon! In the meantime, see the [sample app](https://share.streamlit.io/tvst/plost) and its [source code](https://github.com/tvst/plost/blob/master/streamlit_app.py).
 
 ## Why the name
 
