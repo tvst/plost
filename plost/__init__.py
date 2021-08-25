@@ -1,16 +1,14 @@
+"""🍅 Plost
+
+A deceptively simple plotting library for Streamlit.
+You've been writing plots wrong all this time!
+"""
 import streamlit as st
 import numbers
 import copy
 
 # Syntactic sugar to make VegaLite more fun.
 _ = dict
-
-# TODO: If you don't pick an 'x' we use the 0th index
-# TODO: If you don't pick a 'y' we use the 1st column (or all the columns??)
-# TODO: Figure out why tooltip only shows on minimap
-# TODO: Only send the columns that are actually used. (Same in all other charts)
-# TODO: Ability to set x or y annotations
-# TODO: Show numbers in pie/donut charts.
 
 def _clean_encoding(data, enc, **kwargs):
     if isinstance(enc, str):
@@ -221,26 +219,28 @@ def line_chart(
     ----------
     data : DataFrame
     x : str or dict
-        Column name to use for the x axis, or Vega-Lite encoding dict for the x axis.
+        Column name to use for the x axis, or Vega-Lite dict for the x encoding.
     y : str or list of str or dict
-        Column name to use for the y axis, or Vega-Lite encoding dict for the y axis.
-        If a list of strings, draws several lines on the same chart. This is only useful for
-        long-format tables; for wide-format tables, use color parameter instead.
-    color : str or dict
-        Column name to use for chart colors, or Vega-Lite encoding dict for color values.
-        This is only useful for wide-format tables; for long-format tables, pass a list to the
-        y parameter instead.
+        Column name to use for the y axis, or Vega-Lite dict for the y encoding.
+        If a list of strings, draws several series on the same chart by melting your wide-format
+        table into a long-format table behind the scenes. If your table is already in long-format,
+        the way to draw multiple series is by using the color parameter instead.
+    color : str or dict or None
+        Column name to use for chart colors, or Vega-Lite dict for the color encoding.
+        May also be a literal value, like "#223344" or "green".
+        None means the default color will be used.
     opacity : number or str or dict or None
         Value to use for the opacity, or column name, or Vega-Lite encoding dict.
-        If None, opacity is left unspecified (meaning full opacity).
+        None means the default opacity (1.0) will be used.
     width : number or None
-        Chart width. See also, use_container_width.
+        Chart width in pixels or None for default. See also, use_container_width.
     height : number or None
-        Chart height.
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at Vega-Lite's default (i.e. 'right'). To hide, use
-        'disable'.
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
     pan_zoom : str or None
         Specify the method for panning and zooming the chart, if any. Allowed values:
         - 'both': drag canvas to pan, use scroll with mouse to zoom.
@@ -292,6 +292,48 @@ def area_chart(
         pan_zoom='both',
         use_container_width=True,
     ):
+    """Draw an area chart.
+
+    Parameters
+    ----------
+    data : DataFrame
+    x : str or dict
+        Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+    y : str or list of str or dict
+        Column name to use for the y axis, or Vega-Lite dict for the y encoding.
+        If a list of strings, draws several series on the same chart by melting your wide-format
+        table into a long-format table behind the scenes. If your table is already in long-format,
+        the way to draw multiple series is by using the color parameter instead.
+    color : str or dict or None
+        Column name to use for chart colors, or Vega-Lite dict for the color encoding.
+        May also be a literal value, like "#223344" or "green".
+        None means the default color will be used.
+    opacity : number or str or dict or None
+        Value to use for the opacity, or column name, or Vega-Lite encoding dict.
+        None means the default opacity (1.0) will be used.
+    stack : bool or str
+        True means areas of different colors will be stacked. False means there will be no
+        stacking, A Vega-Lite stack spec like 'normalized' is also accepted.
+    width : number or None
+        Chart width in pixels or None for default. See also, use_container_width.
+    height : number or None
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
+    legend : str or None
+        Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
+    pan_zoom : str or None
+        Specify the method for panning and zooming the chart, if any. Allowed values:
+        - 'both': drag canvas to pan, use scroll with mouse to zoom.
+        - 'pan': drag canvas to pan.
+        - 'zoom': scroll with mouse to zoom.
+        - 'minimap': drag onto minimap to select viewport area.
+        - None: chart will not be pannable/zoomable.
+    use_container_width : bool
+        If True, sets the chart to use all available space. This takes precedence over the width
+        parameter.
+    """
     melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend)
 
     if color:
@@ -340,6 +382,53 @@ def bar_chart(
         pan_zoom=None,
         use_container_width=False,
     ):
+    """Draw a bar chart.
+
+    Parameters
+    ----------
+    data : DataFrame
+    bar : str or dict
+        Column name to use for the domain axis, or Vega-Lite dict for x/y encoding.
+    value : str or list of str or dict
+        Column name to use for the codomain axis, or Vega-Lite dict for the x/y encoding.  If a list
+        of strings, draws several series on the same chart by melting your wide-format table into a
+        long-format table behind the scenes. If your table is already, the way to draw multiple
+        series is by using the color or group parameters instead.
+    color : str or dict or None
+        Column name to use for chart colors, or Vega-Lite dict for the color encoding.
+        May also be a literal value, like "#223344" or "green".
+        None means the default color will be used.
+    opacity : number or str or dict or None
+        Value to use for the opacity, or column name, or Vega-Lite encoding dict.
+        None means the default opacity (1.0) will be used.
+    group : str or dict or None
+        Column name to use for grouping bars, or Vega-Lite dict for column/row encoding.
+        If None, no bars will be grouped.
+    stack : bool or str
+        True means areas of different colors will be stacked. False means there will be no
+        stacking, A Vega-Lite stack spec like 'normalized' is also accepted.
+    direction : str
+        Specifies the orientation of the bars in the chart: 'vertical' or 'horizontal'.
+    width : number or None
+        Chart width in pixels or None for default. See also, use_container_width.
+    height : number or None
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
+    legend : str or None
+        Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
+    pan_zoom : str or None
+        Specify the method for panning and zooming the chart, if any. Allowed values:
+        - 'both': drag canvas to pan, use scroll with mouse to zoom.
+        - 'pan': drag canvas to pan.
+        - 'zoom': scroll with mouse to zoom.
+        - 'minimap': drag onto minimap to select viewport area.
+        - None: chart will not be pannable/zoomable.
+    use_container_width : bool
+        If True, sets the chart to use all available space. This takes precedence over the width
+        parameter.
+    """
     x_enc = _clean_encoding(data, bar, title=None)
     value = _as_list_like(value)
     melted, data, y_enc, color_enc = _maybe_melt(data, bar, value, legend)
@@ -420,6 +509,50 @@ def scatter_chart(
         pan_zoom='both',
         use_container_width=True,
     ):
+    """Draw a scatter-plot chart.
+
+    Parameters
+    ----------
+    data : DataFrame
+    x : str or dict
+        Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+    y : str or list of str or dict
+        Column name to use for the y axis, or Vega-Lite dict for the y encoding.
+        If a list of strings, draws several series on the same chart by melting your wide-format
+        table into a long-format table behind the scenes. If your table is already in long-format,
+        the way to draw multiple lines is by using the color parameter instead.
+    color : str or dict or None
+        Column name to use for chart colors, or Vega-Lite dict for the color encoding.
+        May also be a literal value, like "#223344" or "green".
+        None means the default color will be used.
+    size : str or dict or None
+        Column name to use for the size of plotted datapoints, or Vega-Lite dict for the size
+        encoding. May also be a literal value, like 10.
+        None means the default size will be used.
+    opacity : number or str or dict or None
+        Value to use for the opacity, or column name, or Vega-Lite encoding dict.
+        None means the default opacity (1.0) will be used.
+    width : number or None
+        Chart width in pixels or None for default. See also, use_container_width.
+    height : number or None
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
+    legend : str or None
+        Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
+    pan_zoom : str or None
+        Specify the method for panning and zooming the chart, if any. Allowed values:
+        - 'both': drag canvas to pan, use scroll with mouse to zoom.
+        - 'pan': drag canvas to pan.
+        - 'zoom': scroll with mouse to zoom.
+        - 'minimap': drag onto minimap to select viewport area.
+        - None: chart will not be pannable/zoomable.
+    use_container_width : bool
+        If True, sets the chart to use all available space. This takes precedence over the width
+        parameter.
+    """
+    # TODO Melt
 
     spec = _(
         data=data,
@@ -477,6 +610,31 @@ def pie_chart(
         legend=None,
         use_container_width=True,
     ):
+    """Draw a pie chart.
+
+    Parameters
+    ----------
+    data : DataFrame
+    theta : str or dict
+        Column name to use for the angle of the pie slices, or Vega-Lite dict for the theta
+        encoding.
+    color : str or dict or None
+        Column name to use for chart colors, or Vega-Lite dict for the color encoding.
+        May also be a literal value, like "#223344" or "green".
+        None means the default color will be used.
+    width : number or None
+        Chart width in pixels or None for default. See also, use_container_width.
+    height : number or None
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
+    legend : str or None
+        Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
+    use_container_width : bool
+        If True, sets the chart to use all available space. This takes precedence over the width
+        parameter.
+    """
 
     spec = _pie_spec(
         data,
@@ -501,6 +659,31 @@ def donut_chart(
         legend=None,
         use_container_width=True,
     ):
+    """Draw a pie chart.
+
+    Parameters
+    ----------
+    data : DataFrame
+    theta : str or dict
+        Column name to use for the angle of the pie slices, or Vega-Lite dict for the theta
+        encoding.
+    color : str or dict or None
+        Column name to use for chart colors, or Vega-Lite dict for the color encoding.
+        May also be a literal value, like "#223344" or "green".
+        None means the default color will be used.
+    width : number or None
+        Chart width in pixels or None for default. See also, use_container_width.
+    height : number or None
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
+    legend : str or None
+        Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
+    use_container_width : bool
+        If True, sets the chart to use all available space. This takes precedence over the width
+        parameter.
+    """
 
     spec = _pie_spec(
         data,
@@ -538,6 +721,50 @@ def event_chart(
         pan_zoom='both',
         use_container_width=True,
     ):
+    """Draw a line chart.
+
+    Parameters
+    ----------
+    data : DataFrame
+    x : str or dict
+        Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+    y : str or list of str or dict
+        Column name to use for the y axis, or Vega-Lite dict for the y encoding.
+        If a list of strings, draws several series on the same chart by melting your wide-format
+        table into a long-format table behind the scenes. If your table is already in long-format,
+        the way to draw multiple series is by using the color parameter instead.
+    color : str or dict or None
+        Column name to use for chart colors, or Vega-Lite dict for the color encoding.
+        May also be a literal value, like "#223344" or "green".
+        None means the default color will be used.
+    size : number or str or dict or None
+        Column name to use for chart sizes, or Vega-Lite dict for the size encoding.
+        May also be a literal value, like 123. None means the size will be inferred.
+    opacity : number or str or dict or None
+        Value to use for the opacity, or column name, or Vega-Lite encoding dict.
+        None means the default opacity (1.0) will be used.
+    thickness : number or str or dict
+        The thickness of the tick marks in the chart.
+    width : number or None
+        Chart width in pixels or None for default. See also, use_container_width.
+    height : number or None
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
+    legend : str or None
+        Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
+    pan_zoom : str or None
+        Specify the method for panning and zooming the chart, if any. Allowed values:
+        - 'both': drag canvas to pan, use scroll with mouse to zoom.
+        - 'pan': drag canvas to pan.
+        - 'zoom': scroll with mouse to zoom.
+        - 'minimap': drag onto minimap to select viewport area.
+        - None: chart will not be pannable/zoomable.
+    use_container_width : bool
+        If True, sets the chart to use all available space. This takes precedence over the width
+        parameter.
+    """
 
     spec = _(
         data=data,
