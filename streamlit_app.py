@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import plost
 
+st.set_page_config(page_title='Plost', page_icon=':tomato:')
+
 @st.cache
 def get_datasets():
     N = 50
