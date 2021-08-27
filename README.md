@@ -35,6 +35,11 @@ But this is just the simplest possible example. You can do a lot more with Plost
 Check out the [the sample app](https://share.streamlit.io/tvst/plost) for a taste.
 
 
+## Juicy examples
+
+Check out [the sample app](https://share.streamlit.io/tvst/plost)!
+
+
 ## Documentation
 
 This is in [the sample app](https://share.streamlit.io/tvst/plost) too!
