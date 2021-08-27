@@ -70,18 +70,25 @@ def _guess_string_encoding_type(data, enc):
 VAR_NAME = 'variable' # Singular because it makes tooltips nicer
 VALUE_NAME = 'value' # Singular because it makes tooltips nicer
 
-def _maybe_melt(data, x, y, legend):
+def _maybe_melt(data, x, y, legend, *columns_to_keep):
     melted = False
+    variable_enc = None
 
-    # Dataframe is in wide format. Need to convert to long format for Vega-Lite.
-    id_vars = [x]
-    value_vars = _as_list_like(y)
+    # We can only melt if you're not passing a complex spec into x or y.
+    if isinstance(x, dict) or isinstance(y, dict):
+        value_enc = _clean_encoding(data, y)
 
-    if len(value_vars) == 1:
-        value_enc = _clean_encoding(data, value_vars[0])
-        variable_enc = None
+    # Check if dataframe is already in long format. If so, nothing to do!
+    elif isinstance(y, str):
+        value_enc = _clean_encoding(data, y)
 
     else:
+        # Dataframe is in wide format. Lets melt it into long format for Vega-Lite.
+        id_vars = _as_list_like(x)
+        value_vars = _as_list_like(y)
+
+        id_vars = list(id_vars) + list(c for c in columns_to_keep if c in data.columns)
+
         if VAR_NAME in data.columns:
             raise TypeError(f'Data already contains a column called {VAR_NAME}')
         if VALUE_NAME in data.columns:
@@ -89,8 +96,9 @@ def _maybe_melt(data, x, y, legend):
 
         data = data.melt(
             id_vars=id_vars, value_vars=value_vars, var_name=VAR_NAME, value_name=VALUE_NAME)
-        data[VAR_NAME] = data[VAR_NAME].astype('string')
 
+        # Don't show titles in axes since they're no longer the original names and make no sense to
+        # the user.
         value_enc = _clean_encoding(data, VALUE_NAME, title=None)
         variable_enc = _(field=VAR_NAME, title=None, legend=_get_legend_dict(legend))
         melted = True
@@ -252,7 +260,7 @@ def line_chart(
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
-    melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend)
+    melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend, opacity)
 
     if color:
         color_enc = _clean_encoding(data, color)
@@ -334,7 +342,7 @@ def area_chart(
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
-    melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend)
+    melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend, opacity)
 
     if color:
         color_enc = _clean_encoding(data, color)
@@ -430,8 +438,7 @@ def bar_chart(
         parameter.
     """
     x_enc = _clean_encoding(data, bar, title=None)
-    value = _as_list_like(value)
-    melted, data, y_enc, color_enc = _maybe_melt(data, bar, value, legend)
+    melted, data, y_enc, color_enc = _maybe_melt(data, bar, value, legend, opacity)
 
     if color:
         if color == 'value': # 'value', as in the value= arg.
@@ -552,7 +559,7 @@ def scatter_chart(
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
-    # TODO Melt
+    melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend, size, opacity)
 
     spec = _(
         data=data,
@@ -562,8 +569,8 @@ def scatter_chart(
         title=title,
         encoding=_(
             x=_clean_encoding(data, x),
-            y=_clean_encoding(data, y),
-            color=_clean_encoding(data, color, legend=_get_legend_dict(legend)),
+            y=y_enc,
+            color=color_enc,
             size=_clean_encoding(data, size),
             opacity=_clean_encoding(data, opacity),
         ),

@@ -20,8 +20,8 @@ def get_datasets():
 
     N = 500
     randn = pd.DataFrame(
-        np.random.randn(N, 3),
-        columns=['a', 'b', 'c'],
+        np.random.randn(N, 4),
+        columns=['a', 'b', 'c', 'd'],
     )
 
     stocks = pd.DataFrame(dict(
@@ -213,6 +213,16 @@ with st.echo():
         y='b',
         size='c',
         opacity='b',
+        height=500)
+
+""
+
+with st.echo():
+    plost.scatter_chart(
+        data['randn'],
+        x='a',
+        y=['b', 'c'],
+        size='d',
         height=500)
 
 "---"
