@@ -5,6 +5,14 @@ import plost
 
 st.set_page_config(page_title='Plost', page_icon=':tomato:')
 
+"""
+# 🍅 Plost
+
+You've been writing plots wrong all this time.
+
+---
+"""
+
 @st.cache
 def get_datasets():
     N = 50
@@ -49,12 +57,6 @@ def get_datasets():
 data = get_datasets()
 
 """
-# 🍅 Plost
-
-You've been writing plots wrong all this time.
-
----
-
 ## Datasets used for these examples
 
 Let's say you have some datasets like these:
@@ -73,6 +75,10 @@ Now let's take this data and go plost some plosts!
 
 "### line_chart()"
 
+with st.expander('Documentation'):
+    st.write(plost.line_chart)
+""
+
 with st.echo():
     plost.line_chart(
         data['rand'],
@@ -90,6 +96,10 @@ with st.echo():
 "---"
 
 "### area_chart()"
+
+with st.expander('Documentation'):
+    st.write(plost.area_chart)
+""
 
 with st.echo():
     plost.area_chart(
@@ -129,6 +139,10 @@ with st.echo():
 "---"
 
 "### bar_chart()"
+
+with st.expander('Documentation'):
+    st.write(plost.bar_chart)
+""
 
 with st.echo():
     plost.bar_chart(
@@ -186,6 +200,10 @@ with st.echo():
 
 "### pie_chart()"
 
+with st.expander('Documentation'):
+    st.write(plost.pie_chart)
+""
+
 with st.echo():
     plost.pie_chart(
         data['stocks'],
@@ -196,6 +214,10 @@ with st.echo():
 
 "### donut_chart()"
 
+with st.expander('Documentation'):
+    st.write(plost.donut_chart)
+""
+
 with st.echo():
     plost.donut_chart(
         data['stocks'],
@@ -205,6 +227,10 @@ with st.echo():
 "---"
 
 "### scatter_chart()"
+
+with st.expander('Documentation'):
+    st.write(plost.scatter_chart)
+""
 
 with st.echo():
     plost.scatter_chart(
@@ -228,6 +254,10 @@ with st.echo():
 "---"
 
 "### event_chart()"
+
+with st.expander('Documentation'):
+    st.write(plost.event_chart)
+""
 
 with st.echo():
     plost.event_chart(
@@ -253,6 +283,10 @@ with st.echo():
 
 "### hist()"
 
+with st.expander('Documentation'):
+    st.write(plost.hist)
+""
+
 with st.echo():
     plost.hist(
         data['randn'],
@@ -262,6 +296,10 @@ with st.echo():
 "---"
 
 "### time_hist()"
+
+with st.expander('Documentation'):
+    st.write(plost.time_hist)
+""
 
 with st.echo():
     plost.time_hist(
@@ -286,6 +324,10 @@ with st.echo():
 "---"
 
 "### xy_hist()"
+
+with st.expander('Documentation'):
+    st.write(plost.xy_hist)
+""
 
 with st.echo():
     plost.xy_hist(
@@ -314,6 +356,10 @@ Woah, double histogram :rainbow:
 
 "### scatter_hist()"
 
+with st.expander('Documentation'):
+    st.write(plost.scatter_hist)
+""
+
 with st.echo():
     plost.scatter_hist(
         data['randn'],
@@ -330,6 +376,8 @@ with st.echo():
 ---
 
 ## Minimaps
+
+You can add a minimap to many of the charts above my simply passing `pan_zoom='minimap'`.
 """
 
 with st.echo():
