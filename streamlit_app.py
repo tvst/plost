@@ -12,7 +12,13 @@ A deceptively simple plotting library for [Streamlit](https://github.com/streaml
 
 _“Because you've been writing plots wrong all this time”_
 
-Below you'll find documentation and live examples showing how to use Plost.
+Below you'll find documentation and live examples showing how to use Plost. Of course,
+the first step is:
+
+```
+pip install streamlit
+pip install plost
+```
 
 ---
 """
