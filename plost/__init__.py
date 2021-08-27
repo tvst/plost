@@ -10,6 +10,7 @@ import copy
 # Syntactic sugar to make VegaLite more fun.
 _ = dict
 
+
 def _clean_encoding(data, enc, **kwargs):
     if isinstance(enc, str):
         if 'type' in kwargs:
@@ -69,6 +70,7 @@ def _guess_string_encoding_type(data, enc):
 
 VAR_NAME = 'variable' # Singular because it makes tooltips nicer
 VALUE_NAME = 'value' # Singular because it makes tooltips nicer
+
 
 def _maybe_melt(data, x, y, legend, *columns_to_keep):
     melted = False
@@ -606,7 +608,6 @@ def _pie_spec(
     )
 
 
-
 def pie_chart(
         data,
         theta,
@@ -666,7 +667,7 @@ def donut_chart(
         legend=None,
         use_container_width=True,
     ):
-    """Draw a pie chart.
+    """Draw a donut chart.
 
     Parameters
     ----------
@@ -712,7 +713,6 @@ def donut_chart(
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
 
-# Data must be in long format.
 def event_chart(
         data,
         x,
@@ -728,7 +728,7 @@ def event_chart(
         pan_zoom='both',
         use_container_width=True,
     ):
-    """Draw a line chart.
+    """Draw an event chart.
 
     Parameters
     ----------
@@ -795,8 +795,6 @@ def event_chart(
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
 
-
-
 def time_hist(
         data,
         date,
@@ -811,6 +809,52 @@ def time_hist(
         pan_zoom=None,
         use_container_width=True,
     ):
+    """Calculate and draw a time histogram.
+
+    Parameters
+    ----------
+    data : DataFrame
+    date: str
+        Column name to use for the date.
+    x_unit : str
+        Vega-Lite time unit to use for the x axis, such as 'seconds', 'minutes', 'hours', 'day' (day
+        of week), 'date' (day of month), 'week', 'month', 'year'.
+        See https://vega.github.io/vega-lite/docs/timeunit.html
+    y_unit : str
+        Vega-Lite time unit to use for the y axis, such as 'seconds', 'minutes', 'hours', 'day' (day
+        of week), 'date' (day of month), 'week', 'month', 'year'.
+        See https://vega.github.io/vega-lite/docs/timeunit.html
+    color : str or dict or None
+        Column name to use for chart colors, or Vega-Lite dict for the color encoding.
+        May be a literal value, like "#223344" or "green".
+        If using aggregate is not None, this is the column that will be aggregated.
+        None means the default color will be used, or that the aggregation function does not require
+        a column.
+    aggregate : str or None
+        The Vega-Lite aggregation operation to use for this histogram. Defaults to 'count'.
+        Common operations are 'cound', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
+        'valid', and 'missing'.
+        See https://vega.github.io/vega-lite/docs/aggregate.html#ops.
+    width : number or None
+        Chart width in pixels or None for default. See also, use_container_width.
+    height : number or None
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
+    legend : str or None
+        Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
+    pan_zoom : str or None
+        Specify the method for panning and zooming the chart, if any. Allowed values:
+        - 'both': drag canvas to pan, use scroll with mouse to zoom.
+        - 'pan': drag canvas to pan.
+        - 'zoom': scroll with mouse to zoom.
+        - 'minimap': Not supported for histograms.
+        - None: chart will not be pannable/zoomable.
+    use_container_width : bool
+        If True, sets the chart to use all available space. This takes precedence over the width
+        parameter.
+    """
 
     spec = _(
         data=data,
@@ -844,6 +888,56 @@ def xy_hist(
         pan_zoom=None,
         use_container_width=True,
     ):
+    """Calculate and draw an x-y histogram (i.e. 2D histogram).
+
+    Parameters
+    ----------
+    x : str or dict
+        Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+    y : str or list of str or dict
+        Column name to use for the y axis, or Vega-Lite dict for the y encoding.
+        If a list of strings, draws several series on the same chart by melting your wide-format
+        table into a long-format table behind the scenes. If your table is already in long-format,
+        the way to draw multiple series is by using the color parameter instead.
+    color : str or dict or None
+        Column name to use for chart colors, or Vega-Lite dict for the color encoding.
+        May be a literal value, like "#223344" or "green".
+        If using aggregate is not None, this is the column that will be aggregated.
+        None means the default color will be used, or that the aggregation operation does not require
+        a column.
+    aggregate : str or None
+        The Vega-Lite aggregation operation to use for this histogram. Defaults to 'count'.
+        Common operations are 'cound', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
+        'valid', and 'missing'.
+        See https://vega.github.io/vega-lite/docs/aggregate.html#ops.
+    x_bin : dict or None
+        Allows you to customize the binning properties for the x axis.
+        If None, uses the default binning properties.
+        See https://vega.github.io/vega-lite/docs/bin.html#bin-parameters>
+    y_bin : dict or None
+        Allows you to customize the binning properties for the y axis.
+        If None, uses the default binning properties.
+        See https://vega.github.io/vega-lite/docs/bin.html#bin-parameters>
+    width : number or None
+        Chart width in pixels or None for default. See also, use_container_width.
+    height : number or None
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
+    legend : str or None
+        Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
+    pan_zoom : str or None
+        Specify the method for panning and zooming the chart, if any. Allowed values:
+        - 'both': drag canvas to pan, use scroll with mouse to zoom.
+        - 'pan': drag canvas to pan.
+        - 'zoom': scroll with mouse to zoom.
+        - 'minimap': Not supported for histograms.
+        - None: chart will not be pannable/zoomable.
+    use_container_width : bool
+        If True, sets the chart to use all available space. This takes precedence over the width
+        parameter.
+    """
 
     spec = _(
         data=data,
@@ -867,7 +961,7 @@ def hist(
         x,
         y=None,
         aggregate='count',
-        bin=True,
+        bin=None,
         width=None,
         height=None,
         title=None,
@@ -875,6 +969,44 @@ def hist(
         pan_zoom=None,
         use_container_width=True,
     ):
+    """Calculate and draw a histogram.
+
+    Parameters
+    ----------
+    x : str or dict
+        Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+    y : str or dict or None
+        Column to be aggregated. See aggregate parameter.
+        None means the aggregation operation does not require a column.
+    aggregate : str or None
+        The Vega-Lite aggregation operation to use for this histogram. Defaults to 'count'.
+        Common operations are 'cound', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
+        'valid', and 'missing'.
+        See https://vega.github.io/vega-lite/docs/aggregate.html#ops.
+    bin : dict or None
+        Allows you to customize the binning properties for the histogram.
+        If None, uses the default binning properties.
+        See https://vega.github.io/vega-lite/docs/bin.html#bin-parameters>
+    width : number or None
+        Chart width in pixels or None for default. See also, use_container_width.
+    height : number or None
+        Chart height in pixels, or None for default.
+    title : str or None
+        Chart title, or None for no title.
+    legend : str or None
+        Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
+        for more. If None, draws the legend at default location. To hide, use 'disable'.
+    pan_zoom : str or None
+        Specify the method for panning and zooming the chart, if any. Allowed values:
+        - 'both': drag canvas to pan, use scroll with mouse to zoom.
+        - 'pan': drag canvas to pan.
+        - 'zoom': scroll with mouse to zoom.
+        - 'minimap': Not supported for histograms.
+        - None: chart will not be pannable/zoomable.
+    use_container_width : bool
+        If True, sets the chart to use all available space. This takes precedence over the width
+        parameter.
+    """
 
     spec = _(
         data=data,
@@ -883,7 +1015,7 @@ def hist(
         height=height,
         title=title,
         encoding=_(
-            x=_clean_encoding(data, x, bin=bin),
+            x=_clean_encoding(data, x, bin=bin or True),
             y=_clean_encoding(data, y, aggregate=aggregate),
         ),
         selection=_get_selection(pan_zoom),
@@ -900,8 +1032,8 @@ def scatter_hist(
         size=None,
         opacity=None,
         aggregate='count',
-        x_bin=True,
-        y_bin=True,
+        x_bin=None,
+        y_bin=None,
         width=None,
         height=None,
         title=None,
@@ -929,7 +1061,7 @@ def scatter_hist(
         width=width,
         height=_MINI_CHART_SIZE,
         encoding=_(
-            x=_clean_encoding(data, x, bin=x_bin, title=None, axis=None),
+            x=_clean_encoding(data, x, bin=x_bin or True, title=None, axis=None),
             y=_clean_encoding(data, y, aggregate=aggregate, title=None),
         ),
     )
@@ -940,7 +1072,7 @@ def scatter_hist(
         width=_MINI_CHART_SIZE,
         encoding=_(
             x=_clean_encoding(data, x, aggregate=aggregate, title=None),
-            y=_clean_encoding(data, y, bin=y_bin, title=None, axis=None),
+            y=_clean_encoding(data, y, bin=y_bin or True, title=None, axis=None),
         ),
     )
 
