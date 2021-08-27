@@ -230,11 +230,13 @@ def line_chart(
     data : DataFrame
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple series is by using the color parameter instead.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May also be a literal value, like "#223344" or "green".
@@ -309,11 +311,13 @@ def area_chart(
     data : DataFrame
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple series is by using the color parameter instead.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May also be a literal value, like "#223344" or "green".
@@ -525,11 +529,13 @@ def scatter_chart(
     data : DataFrame
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple lines is by using the color parameter instead.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May also be a literal value, like "#223344" or "green".
@@ -735,11 +741,13 @@ def event_chart(
     data : DataFrame
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple series is by using the color parameter instead.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May also be a literal value, like "#223344" or "green".
@@ -894,11 +902,13 @@ def xy_hist(
     ----------
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple series is by using the color parameter instead.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May be a literal value, like "#223344" or "green".
@@ -975,9 +985,11 @@ def hist(
     ----------
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     y : str or dict or None
         Column to be aggregated. See aggregate parameter.
         None means the aggregation operation does not require a column.
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
     aggregate : str or None
         The Vega-Lite aggregation operation to use for this histogram. Defaults to 'count'.
         Common operations are 'cound', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
