@@ -14,9 +14,11 @@ pip install plost
 
 ## Basics
 
-Plost makes it easy to build common plots using the Vega-Lite library but without having to
-specify complex Vega-Lite specs (unless you're doing something tricky), and without having to
-melt your DataFrame from long format to wide format (the bane of most Vega-Lite plots!)
+Plost makes it easy to build common plots using the
+[Vega-Lite](https://vega.github.io/vega-lite/)
+library but without having to delve into Vega-Lite specs (unless you're doing
+something tricky), and without having to melt your DataFrame from long format to wide
+format (the bane of most Vega-Lite plots!)
 
 For example, let's say you have a "long-format" table like this:
 
@@ -80,7 +82,7 @@ plost.line_chart(
 
 But we're just scratching the surface. Basically the idea is that Plost allows
 you to make beautiful Vega-Lite-driven charts for your most common needs, without
-having to learng about the powerful yet complex language behind Vega-Lite.
+having to learn about the powerful yet complex language behind Vega-Lite.
 
 Check out the [the sample app / docs](https://share.streamlit.io/tvst/plost) for
 a taste of other amazing things you can do!
