@@ -14,12 +14,22 @@ pip install plost
 
 ## Basics
 
-Plost makes it easy to make common plots using the Vega-Lite library but without having to specify
-complex Vega-Lite specs (unless you're doing something tricky), and without having to melt your
-DataFrame from long format to wide format (the bane of most Vega-Lite plots!)
+Plost makes it easy to build common plots using the Vega-Lite library but without having to
+specify complex Vega-Lite specs (unless you're doing something tricky), and without having to
+melt your DataFrame from long format to wide format (the bane of most Vega-Lite plots!)
 
-For example, this is a how you draw line chart where Plost internally melts the input data
-appropriately for you:
+For example, let's say you have a "long-format" table like this:
+
+| time | stock_name | stock_value |
+|------|------------|-------------|
+| ...  | stock1     | 1           |
+| ...  | stock2     | 2           |
+| ...  | stock1     | 100         |
+| ...  | stock2     | 200         |
+
+
+Then you can draw a line chart by simply calling `line_chart()` with some
+column names:
 
 ```python
 import plost
@@ -27,12 +37,53 @@ import plost
 plost.line_chart(
   my_dataframe,
   x='time',  # The name of the column to use for the x axis.
-  y=('stock1', 'stock2'),  # The name of the colums to use for the data itself.
+  y='stock_value',  # The name of the column to use for the data itself.
+  color='stock_name', # The name of the column to use for the line colors.
 )
 ```
 
-But this is just the simplest possible example. You can do a lot more with Plost!
-Check out the [the sample app](https://share.streamlit.io/tvst/plost) for a taste.
+Simple enough! But what if you instead have a "wide-format" table like this, which is
+super common in reality:
+
+| time | stock1 | stock2 |
+|------|--------|--------|
+| ...  | 1      | 100    |
+| ...  | 2      | 200    |
+
+Normally you'd have to `melt()` the table with Pandas first or create a complex
+Vega-Lite layered plot. But with Plost, you can just specify what you're trying
+to accomplish and it will melt the data internally for you:
+
+```python
+import plost
+
+plost.line_chart(
+  my_dataframe,
+  x='time',
+  y=('stock1', 'stock2'),  # 👈 This is magic!
+)
+```
+
+Ok, now let's add a mini-map to make panning/zooming even easier:
+
+
+```python
+import plost
+
+plost.line_chart(
+  my_dataframe,
+  x='time',
+  y=('stock1', 'stock2'),
+  pan_zoom='minimap',  # 👈 This is magic!
+)
+```
+
+But we're just scratching the surface. Basically the idea is that Plost allows
+you to make beautiful Vega-Lite-driven charts for your most common needs, without
+having to learng about the powerful yet complex language behind Vega-Lite.
+
+Check out the [the sample app / docs](https://share.streamlit.io/tvst/plost) for
+a taste of other amazing things you can do!
 
 
 ## Juicy examples

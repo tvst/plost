@@ -8,9 +8,13 @@ st.set_page_config(page_title='Plost', page_icon=':tomato:')
 """
 # 🍅 Plost
 
-You've been writing plots wrong all this time.
+A deceptively simple plotting library for [Streamlit](https://github.com/streamlit/streamlit).
+
+Because you've been writing _plots_ wrong all this time.
 
 ---
+
+Below you'll find documentation and live examples showing how to use Plost.
 """
 
 @st.cache
@@ -66,7 +70,7 @@ dataset_name = st.selectbox("Datasets", data)
 st.write(data[dataset_name])
 
 """
-Now let's take this data and go plost some plosts!
+Now let's take this data and go _plost_ some _plosts_!
 
 ---
 
@@ -432,3 +436,9 @@ with st.echo():
         width=500,
         height=500,
         pan_zoom='minimap')
+
+""
+""
+""
+""
+"🍅"
