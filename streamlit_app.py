@@ -2,6 +2,8 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plost
+from numpydoc.docscrape import NumpyDocString
+from docutils.core import publish_parts
 
 st.set_page_config(page_title='Plost', page_icon=':tomato:')
 
@@ -21,6 +23,78 @@ pip install plost
 ```
 
 ---
+
+## Basics
+
+Plost makes it easy to build common plots using the
+[Vega-Lite](https://vega.github.io/vega-lite/)
+library but without having to delve into Vega-Lite specs (unless you're doing
+something tricky), and without having to melt your DataFrame from long format to wide
+format (the bane of most Vega-Lite plots!)
+
+For example, let's say you have a "long-format" table like this:
+
+| time | stock_name | stock_value |
+|------|------------|-------------|
+| ...  | stock1     | 1           |
+| ...  | stock2     | 2           |
+| ...  | stock1     | 100         |
+| ...  | stock2     | 200         |
+
+
+Then you can draw a line chart by simply calling `line_chart()` with some
+column names:
+
+```python
+import plost
+
+plost.line_chart(
+  my_dataframe,
+  x='time',  # The name of the column to use for the x axis.
+  y='stock_value',  # The name of the column to use for the data itself.
+  color='stock_name', # The name of the column to use for the line colors.
+)
+```
+
+Simple enough! But what if you instead have a "wide-format" table like this, which is
+super common in reality:
+
+| time | stock1 | stock2 |
+|------|--------|--------|
+| ...  | 1      | 100    |
+| ...  | 2      | 200    |
+
+Normally you'd have to `melt()` the table with Pandas first or create a complex
+Vega-Lite layered plot. But with Plost, you can just specify what you're trying
+to accomplish and it will melt the data internally for you:
+
+```python
+import plost
+
+plost.line_chart(
+  my_dataframe,
+  x='time',
+  y=('stock1', 'stock2'),  # 👈 This is magic!
+)
+```
+
+Ok, now let's add a mini-map to make panning/zooming even easier:
+
+
+```python
+import plost
+
+plost.line_chart(
+  my_dataframe,
+  x='time',
+  y=('stock1', 'stock2'),
+  pan_zoom='minimap',  # 👈 This is magic!
+)
+```
+
+But we're just scratching the surface. Basically the idea is that Plost allows
+you to make beautiful Vega-Lite-driven charts for your most common needs, without
+having to learn about the powerful yet complex language behind Vega-Lite.
 """
 
 @st.cache
@@ -33,7 +107,7 @@ def get_datasets():
 
     N = 500
     events = pd.DataFrame()
-    events['time'] = np.random.randn(N)
+    events['time_delta_s'] = np.random.randn(N)
     events['servers'] = np.random.choice(['server 1', 'server 2', 'server 3'], N)
 
     N = 500
@@ -59,21 +133,27 @@ def get_datasets():
         events=events,
         pageviews=pageviews,
         stocks=stocks,
-        seattle=pd.read_csv('./data/seattle-weather.csv'),
-        sp500=pd.read_csv('./data/sp500.csv'),
+        seattle_weather=pd.read_csv('./data/seattle-weather.csv', parse_dates=['date']),
+        sp500=pd.read_csv('./data/sp500.csv', parse_dates=['date']),
     )
 
 
-data = get_datasets()
+datasets = get_datasets()
 
 """
+---
+
 ## Datasets used for these examples
 
 Let's say you have some datasets like these:
 """
 
-dataset_name = st.selectbox("Datasets", data)
-st.write(data[dataset_name])
+dataset_name = st.selectbox("Datasets", datasets)
+st.write(datasets[dataset_name])
+
+"Where the columns have the following types:"
+
+datasets[dataset_name].dtypes.to_dict(),
 
 """
 Now let's take this data and go _plost_ some _plosts_!
@@ -87,21 +167,22 @@ Now let's take this data and go _plost_ some _plosts_!
 
 with st.expander('Documentation'):
     st.write(plost.line_chart)
-""
-
-with st.echo():
-    plost.line_chart(
-        data['rand'],
-        x='a',
-        y='b')
 
 ""
 
 with st.echo():
     plost.line_chart(
-        data['rand'],
-        x='a',
-        y=('b', 'c'))
+        data=datasets['seattle_weather'],
+        x='date',
+        y='temp_max')
+
+""
+
+with st.echo():
+    plost.line_chart(
+        data=datasets['seattle_weather'],
+        x='date',
+        y=('temp_max', 'temp_min'))
 
 "---"
 
@@ -113,7 +194,7 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.area_chart(
-        data['rand'],
+        data=datasets['rand'],
         x='a',
         y=('b', 'c'))
 
@@ -121,7 +202,7 @@ with st.echo():
 
 with st.echo():
     plost.area_chart(
-        data['rand'],
+        data=datasets['rand'],
         x='a',
         y=('b', 'c'),
         opacity=0.5,
@@ -131,20 +212,10 @@ with st.echo():
 
 with st.echo():
     plost.area_chart(
-        data['rand'],
+        data=datasets['rand'],
         x='a',
         y=('b', 'c'),
         stack='normalize')
-
-""
-
-with st.echo():
-    plost.area_chart(
-        data['seattle'],
-        x=dict(field='date', timeUnit='month'),
-        y=dict(field='temp_max', aggregate='mean'),
-        color='weather',
-    )
 
 "---"
 
@@ -156,7 +227,7 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.bar_chart(
-        data['stocks'],
+        data=datasets['stocks'],
         bar='company',
         value='q2')
 
@@ -164,7 +235,7 @@ with st.echo():
 
 with st.echo():
     plost.bar_chart(
-        data['stocks'],
+        data=datasets['stocks'],
         bar='company',
         value='q2',
         direction='horizontal')
@@ -173,7 +244,7 @@ with st.echo():
 
 with st.echo():
     plost.bar_chart(
-        data['stocks'],
+        data=datasets['stocks'],
         bar='company',
         value=['q2', 'q3'],
     )
@@ -182,7 +253,7 @@ with st.echo():
 
 with st.echo():
     plost.bar_chart(
-        data['stocks'],
+        data=datasets['stocks'],
         bar='company',
         value=['q2', 'q3'],
         stack='normalize')
@@ -191,7 +262,7 @@ with st.echo():
 
 with st.echo():
     plost.bar_chart(
-        data['stocks'],
+        data=datasets['stocks'],
         bar='company',
         value=['q2', 'q3'],
         group=True)
@@ -199,11 +270,12 @@ with st.echo():
 
 with st.echo():
     plost.bar_chart(
-        data['stocks'],
+        data=datasets['stocks'],
         bar='company',
         value=['q2', 'q3'],
         group='value',
         color='company',
+        legend=None,
     )
 
 "---"
@@ -216,7 +288,7 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.pie_chart(
-        data['stocks'],
+        data=datasets['stocks'],
         theta='q2',
         color='company')
 
@@ -230,7 +302,7 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.donut_chart(
-        data['stocks'],
+        data=datasets['stocks'],
         theta='q2',
         color='company')
 
@@ -244,7 +316,7 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.scatter_chart(
-        data['randn'],
+        data=datasets['randn'],
         x='a',
         y='b',
         size='c',
@@ -255,7 +327,7 @@ with st.echo():
 
 with st.echo():
     plost.scatter_chart(
-        data['randn'],
+        data=datasets['randn'],
         x='a',
         y=['b', 'c'],
         size='d',
@@ -271,19 +343,19 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.event_chart(
-        data['events'],
-        x='time',
+        data=datasets['events'],
+        x='time_delta_s',
         y='servers')
 
 ""
 
 with st.echo():
     plost.event_chart(
-        data['events'],
-        x='time',
+        data=datasets['events'],
+        x='time_delta_s',
         y='servers',
         color='servers',
-        legend='disable')
+        legend=None)
 
 """
 ---
@@ -299,9 +371,18 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.hist(
-        data['randn'],
+        data=datasets['randn'],
         x='a',
         aggregate='count')
+
+""
+
+with st.echo():
+    plost.hist(
+        data=datasets['seattle_weather'],
+        x='date',
+        y='temp_max',
+        aggregate='median')
 
 "---"
 
@@ -313,23 +394,14 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.time_hist(
-        data['seattle'],
-        date='date',
-        x_unit='date',
-        y_unit='month',
-        color='temp_max',
-        aggregate='max')
-
-""
-
-with st.echo():
-    plost.time_hist(
-        data['seattle'],
+        data=datasets['seattle_weather'],
         date='date',
         x_unit='week',
         y_unit='day',
         color='temp_max',
-        aggregate='sum')
+        aggregate='median',
+        legend=None,
+    )
 
 "---"
 
@@ -341,7 +413,7 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.xy_hist(
-        data['randn'],
+        data=datasets['randn'],
         x='a',
         y='b',
     )
@@ -350,7 +422,7 @@ with st.echo():
 
 with st.echo():
     plost.xy_hist(
-        data['randn'],
+        data=datasets['randn'],
         x='a',
         y='b',
         x_bin=dict(maxbins=20),
@@ -372,7 +444,7 @@ with st.expander('Documentation'):
 
 with st.echo():
     plost.scatter_hist(
-        data['randn'],
+        data=datasets['randn'],
         x='a',
         y='b',
         size='c',
@@ -385,6 +457,50 @@ with st.echo():
 """
 ---
 
+# Advanced features
+
+## Vega-Lite encoding dicts
+
+You can use [Vega-Lite encoding dicts](https://vega.github.io/vega-lite/docs/encoding.html) for
+the `x`, `y`, `color`, `size`, and `opacity` arguments to do all sorts of fun things. For example,
+the chart below is computing the mean of the `y` values, grouped by month.
+"""
+
+with st.echo():
+    plost.area_chart(
+        data=datasets['seattle_weather'],
+        x=dict(field='date', timeUnit='month'),
+        y=dict(field='temp_max', aggregate='mean'),
+        color='weather',
+    )
+
+"""
+Plost also supports [Altair-style
+shorthands](https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types), like
+"column_name:T" for temporal.
+"""
+
+"""
+---
+
+## Annotations
+"""
+
+with st.echo():
+    plost.area_chart(
+        data=datasets['rand'],
+        x='a',
+        y=('b', 'c'),
+        x_annot={
+            12: "This is when things became random",
+            33: "Actually they were always random. Back to normal now.",
+        },
+    )
+
+
+"""
+---
+
 ## Minimaps
 
 You can add a minimap to many of the charts above my simply passing `pan_zoom='minimap'`.
@@ -392,8 +508,8 @@ You can add a minimap to many of the charts above my simply passing `pan_zoom='m
 
 with st.echo():
     plost.line_chart(
-        data['sp500'],
-        x='date:T',
+        data=datasets['sp500'],
+        x='date',
         y='price',
         width=500,
         pan_zoom='minimap')
@@ -402,8 +518,8 @@ with st.echo():
 
 with st.echo():
     plost.area_chart(
-        data['sp500'],
-        x='date:T',
+        data=datasets['sp500'],
+        x='date',
         y='price',
         width=500,
         pan_zoom='minimap')
@@ -412,7 +528,7 @@ with st.echo():
 
 with st.echo():
     plost.scatter_chart(
-        data['randn'],
+        data=datasets['randn'],
         x='a',
         y='b',
         size='c',
@@ -425,7 +541,7 @@ with st.echo():
 
 with st.echo():
     plost.bar_chart(
-        data['pageviews'],
+        data=datasets['pageviews'],
         bar='pagenum',
         value='pageviews',
         width=500,
@@ -435,7 +551,7 @@ with st.echo():
 
 with st.echo():
     plost.bar_chart(
-        data['pageviews'],
+        data=datasets['pageviews'],
         bar='pagenum',
         value='pageviews',
         direction='horizontal',

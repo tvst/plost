@@ -1,15 +1,14 @@
 """🍅 Plost
 
 A deceptively simple plotting library for Streamlit.
-You've been writing plots wrong all this time!
+You've been writing *plots* wrong all this time!
 """
-import streamlit as st
-import numbers
 import copy
+import numbers
+import streamlit as st
 
 # Syntactic sugar to make VegaLite more fun.
 _ = dict
-
 
 def _clean_encoding(data, enc, **kwargs):
     if isinstance(enc, str):
@@ -102,7 +101,7 @@ def _maybe_melt(data, x, y, legend, *columns_to_keep):
         # Don't show titles in axes since they're no longer the original names and make no sense to
         # the user.
         value_enc = _clean_encoding(data, VALUE_NAME, title=None)
-        variable_enc = _(field=VAR_NAME, title=None, legend=_get_legend_dict(legend))
+        variable_enc = _(field=VAR_NAME, title=None, legend=legend)
         melted = True
 
     return melted, data, value_enc, variable_enc
@@ -137,7 +136,7 @@ def _get_selection(pan_zoom):
 
 
 def _get_legend_dict(legend):
-    if legend == 'disable':
+    if legend is None:
         return _(disable=True)
     return _(orient=legend)
 
@@ -210,16 +209,54 @@ def _add_minimap(orig_spec, encodings, location, filter=False):
     return outer_spec
 
 
+def _add_annotations(spec, x_annot, y_annot):
+    annotation_layers = []
+
+    _add_encoding_annotations(annotation_layers, 'x', x_annot)
+    _add_encoding_annotations(annotation_layers, 'y', y_annot)
+
+    if annotation_layers:
+        spec = _(
+            layer=[
+                spec,
+                *annotation_layers,
+            ]
+        )
+
+    return spec
+
+
+def _add_encoding_annotations(annotation_layers, encoding, annot):
+    if not annot:
+        return
+
+    if isinstance(annot, dict):
+        annot_iter = annot.items()
+    else:
+        annot_iter = ((coord, "") for coord in _as_list_like(annot))
+
+    for coord, label in annot_iter:
+        annotation_layers.append(_(
+            mark='rule',
+            encoding={
+                encoding: _(datum=coord),
+                "tooltip": _(value=f'{label} ({coord})'),
+            },
+        ))
+
+
 def line_chart(
         data,
         x,
         y,
         color=None,
         opacity=None,
+        x_annot=None,
+        y_annot=None,
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='bottom',
         pan_zoom='both',
         use_container_width=True,
     ):
@@ -230,20 +267,37 @@ def line_chart(
     data : DataFrame
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple series is by using the color parameter instead.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May also be a literal value, like "#223344" or "green".
-        None means the default color will be used.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     opacity : number or str or dict or None
         Value to use for the opacity, or column name, or Vega-Lite encoding dict.
         None means the default opacity (1.0) will be used.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
+    x_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific X-axis values.
+        Can be specified as a dict or a list:
+            - list style: [x_value_1, x_value_2, ...]
+            - dict style: {x_value_1: label_1, x_value_2: label_2, ...}
+    y_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific Y-axis values.
+        Can be specified as a dict or a list:
+            - list style: [y_value_1, y_value_2, ...]
+            - dict style: {y_value_1: label_1, y_value_2: label_2, ...}
     width : number or None
         Chart width in pixels or None for default. See also, use_container_width.
     height : number or None
@@ -252,29 +306,33 @@ def line_chart(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     pan_zoom : str or None
         Specify the method for panning and zooming the chart, if any. Allowed values:
-        - 'both': drag canvas to pan, use scroll with mouse to zoom.
-        - 'pan': drag canvas to pan.
-        - 'zoom': scroll with mouse to zoom.
-        - 'minimap': drag onto minimap to select viewport area.
-        - None: chart will not be pannable/zoomable.
+            - 'both': drag canvas to pan, use scroll with mouse to zoom.
+            - 'pan': drag canvas to pan.
+            - 'zoom': scroll with mouse to zoom.
+            - 'minimap': drag onto minimap to select viewport area.
+            - None: chart will not be pannable/zoomable.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
+    legend = _get_legend_dict(legend)
     melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend, opacity)
 
     if color:
-        color_enc = _clean_encoding(data, color)
+        color_enc = _clean_encoding(data, color, legend=legend)
 
-    spec = _(
+    meta = _(
         data=data,
-        mark=_(type='line', tooltip=True),
         width=width,
         height=height,
         title=title,
+    )
+
+    spec = _(
+        mark=_(type='line', tooltip=True),
         encoding=_(
             x=_clean_encoding(data, x),
             y=y_enc,
@@ -283,6 +341,9 @@ def line_chart(
         ),
         selection=_get_selection(pan_zoom),
     )
+
+    spec = _add_annotations(spec, x_annot, y_annot)
+    spec.update(meta)
 
     if pan_zoom == 'minimap':
         spec = _add_minimap(spec, ['x'], 'bottom')
@@ -297,10 +358,12 @@ def area_chart(
         color=None,
         opacity=None,
         stack=True,
+        x_annot=None,
+        y_annot=None,
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='bottom',
         pan_zoom='both',
         use_container_width=True,
     ):
@@ -311,23 +374,41 @@ def area_chart(
     data : DataFrame
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple series is by using the color parameter instead.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May also be a literal value, like "#223344" or "green".
         None means the default color will be used.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     opacity : number or str or dict or None
         Value to use for the opacity, or column name, or Vega-Lite encoding dict.
         None means the default opacity (1.0) will be used.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     stack : bool or str
         True means areas of different colors will be stacked. False means there will be no
         stacking, A Vega-Lite stack spec like 'normalized' is also accepted.
+    x_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific X-axis values.
+        Can be specified as a dict or a list:
+            - list style: [x_value_1, x_value_2, ...]
+            - dict style: {x_value_1: label_1, x_value_2: label_2, ...}
+    y_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific Y-axis values.
+        Can be specified as a dict or a list:
+            - list style: [y_value_1, y_value_2, ...]
+            - dict style: {y_value_1: label_1, y_value_2: label_2, ...}
     width : number or None
         Chart width in pixels or None for default. See also, use_container_width.
     height : number or None
@@ -336,22 +417,23 @@ def area_chart(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     pan_zoom : str or None
         Specify the method for panning and zooming the chart, if any. Allowed values:
-        - 'both': drag canvas to pan, use scroll with mouse to zoom.
-        - 'pan': drag canvas to pan.
-        - 'zoom': scroll with mouse to zoom.
-        - 'minimap': drag onto minimap to select viewport area.
-        - None: chart will not be pannable/zoomable.
+            - 'both': drag canvas to pan, use scroll with mouse to zoom.
+            - 'pan': drag canvas to pan.
+            - 'zoom': scroll with mouse to zoom.
+            - 'minimap': drag onto minimap to select viewport area.
+            - None: chart will not be pannable/zoomable.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
+    legend = _get_legend_dict(legend)
     melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend, opacity)
 
     if color:
-        color_enc = _clean_encoding(data, color)
+        color_enc = _clean_encoding(data, color, legend=legend)
 
     if stack is not None:
         if stack is True:
@@ -359,12 +441,15 @@ def area_chart(
         else:
             y_enc['stack'] = stack
 
-    spec = _(
+    meta = _(
         data=data,
-        mark=_(type='area', tooltip=True),
         width=width,
         height=height,
         title=title,
+    )
+
+    spec = _(
+        mark=_(type='area', tooltip=True),
         encoding=_(
             x=_clean_encoding(data, x),
             y=y_enc,
@@ -373,6 +458,9 @@ def area_chart(
         ),
         selection=_get_selection(pan_zoom),
     )
+
+    spec = _add_annotations(spec, x_annot, y_annot)
+    spec.update(meta)
 
     if pan_zoom == 'minimap':
         spec = _add_minimap(spec, ['x'], 'bottom')
@@ -392,7 +480,7 @@ def bar_chart(
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='bottom',
         pan_zoom=None,
         use_container_width=False,
     ):
@@ -431,25 +519,26 @@ def bar_chart(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     pan_zoom : str or None
         Specify the method for panning and zooming the chart, if any. Allowed values:
-        - 'both': drag canvas to pan, use scroll with mouse to zoom.
-        - 'pan': drag canvas to pan.
-        - 'zoom': scroll with mouse to zoom.
-        - 'minimap': drag onto minimap to select viewport area.
-        - None: chart will not be pannable/zoomable.
+            - 'both': drag canvas to pan, use scroll with mouse to zoom.
+            - 'pan': drag canvas to pan.
+            - 'zoom': scroll with mouse to zoom.
+            - 'minimap': drag onto minimap to select viewport area.
+            - None: chart will not be pannable/zoomable.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
     x_enc = _clean_encoding(data, bar, title=None)
+    legend = _get_legend_dict(legend)
     melted, data, y_enc, color_enc = _maybe_melt(data, bar, value, legend, opacity)
 
     if color:
         if color == 'value': # 'value', as in the value= arg.
             color = VAR_NAME
-        color_enc = _clean_encoding(data, color)
+        color_enc = _clean_encoding(data, color, legend=legend)
 
     column_enc = None
     row_enc = None
@@ -479,12 +568,15 @@ def bar_chart(
         row_enc, column_enc = column_enc, row_enc
         use_container_width = True
 
-    spec = _(
+    meta = _(
         data=data,
-        mark=_(type='bar', tooltip=True),
         width=width,
         height=height,
         title=title,
+    )
+
+    spec = _(
+        mark=_(type='bar', tooltip=True),
         encoding=_(
             x=x_enc,
             y=y_enc,
@@ -494,6 +586,8 @@ def bar_chart(
             row=row_enc,
         ),
     )
+
+    spec.update(meta)
 
     if pan_zoom == 'minimap':
         if direction == 'horizontal':
@@ -515,10 +609,12 @@ def scatter_chart(
         color=None,
         size=None,
         opacity=None,
+        x_annot=None,
+        y_annot=None,
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='right',
         pan_zoom='both',
         use_container_width=True,
     ):
@@ -529,24 +625,44 @@ def scatter_chart(
     data : DataFrame
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple lines is by using the color parameter instead.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May also be a literal value, like "#223344" or "green".
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
         None means the default color will be used.
     size : str or dict or None
         Column name to use for the size of plotted datapoints, or Vega-Lite dict for the size
         encoding. May also be a literal value, like 10.
         None means the default size will be used.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     opacity : number or str or dict or None
         Value to use for the opacity, or column name, or Vega-Lite encoding dict.
         None means the default opacity (1.0) will be used.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
+    x_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific X-axis values.
+        Can be specified as a dict or a list:
+            - list style: [x_value_1, x_value_2, ...]
+            - dict style: {x_value_1: label_1, x_value_2: label_2, ...}
+    y_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific Y-axis values.
+        Can be specified as a dict or a list:
+            - list style: [y_value_1, y_value_2, ...]
+            - dict style: {y_value_1: label_1, y_value_2: label_2, ...}
     width : number or None
         Chart width in pixels or None for default. See also, use_container_width.
     height : number or None
@@ -555,35 +671,42 @@ def scatter_chart(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     pan_zoom : str or None
         Specify the method for panning and zooming the chart, if any. Allowed values:
-        - 'both': drag canvas to pan, use scroll with mouse to zoom.
-        - 'pan': drag canvas to pan.
-        - 'zoom': scroll with mouse to zoom.
-        - 'minimap': drag onto minimap to select viewport area.
-        - None: chart will not be pannable/zoomable.
+            - 'both': drag canvas to pan, use scroll with mouse to zoom.
+            - 'pan': drag canvas to pan.
+            - 'zoom': scroll with mouse to zoom.
+            - 'minimap': drag onto minimap to select viewport area.
+            - None: chart will not be pannable/zoomable.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
+    legend = _get_legend_dict(legend)
     melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend, size, opacity)
 
-    spec = _(
+    meta = _(
         data=data,
-        mark=_(type='circle', tooltip=True),
         width=width,
         height=height,
         title=title,
+    )
+
+    spec = _(
+        mark=_(type='circle', tooltip=True),
         encoding=_(
             x=_clean_encoding(data, x),
             y=y_enc,
             color=color_enc,
-            size=_clean_encoding(data, size),
-            opacity=_clean_encoding(data, opacity),
+            size=_clean_encoding(data, size, legend=legend),
+            opacity=_clean_encoding(data, opacity, legend=legend),
         ),
         selection=_get_selection(pan_zoom),
     )
+
+    spec = _add_annotations(spec, x_annot, y_annot)
+    spec.update(meta)
 
     if pan_zoom == 'minimap':
         spec = _add_minimap(spec, ['x', 'y'], 'bottom')
@@ -595,17 +718,10 @@ def _pie_spec(
         data,
         theta,
         color,
-        width=None,
-        height=None,
-        title=None,
-        legend=None,
+        legend,
     ):
     return _(
-        data=data,
         mark=_(type='arc', tooltip=True),
-        width=width,
-        height=height,
-        title=title,
         view=_(stroke=None),
         encoding=_(
             theta=_clean_encoding(data, theta),
@@ -621,7 +737,7 @@ def pie_chart(
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='right',
         use_container_width=True,
     ):
     """Draw a pie chart.
@@ -644,21 +760,27 @@ def pie_chart(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
 
+    meta = _(
+        data=data,
+        width=width,
+        height=height,
+        title=title,
+    )
+
     spec = _pie_spec(
         data,
         theta,
         color,
-        width,
-        height,
-        title,
         legend,
     )
+
+    spec.update(meta)
 
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
@@ -670,7 +792,7 @@ def donut_chart(
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='right',
         use_container_width=True,
     ):
     """Draw a donut chart.
@@ -693,19 +815,23 @@ def donut_chart(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
 
+    meta = _(
+        data=data,
+        width=width,
+        height=height,
+        title=title,
+    )
+
     spec = _pie_spec(
         data,
         theta,
         color,
-        width,
-        height,
-        title,
         legend,
     )
 
@@ -715,6 +841,8 @@ def donut_chart(
         innerRadius = 50 # Default height is 200 in Streamlit's Vega-Lite element.
 
     spec['mark']['innerRadius'] = innerRadius
+
+    spec.update(meta)
 
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
@@ -727,10 +855,12 @@ def event_chart(
         size=None,
         opacity=0.5,
         thickness=2,
+        x_annot=None,
+        y_annot=None,
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='bottom',
         pan_zoom='both',
         use_container_width=True,
     ):
@@ -741,25 +871,45 @@ def event_chart(
     data : DataFrame
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple series is by using the color parameter instead.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May also be a literal value, like "#223344" or "green".
         None means the default color will be used.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     size : number or str or dict or None
         Column name to use for chart sizes, or Vega-Lite dict for the size encoding.
         May also be a literal value, like 123. None means the size will be inferred.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     opacity : number or str or dict or None
         Value to use for the opacity, or column name, or Vega-Lite encoding dict.
         None means the default opacity (1.0) will be used.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     thickness : number or str or dict
         The thickness of the tick marks in the chart.
+    x_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific X-axis values.
+        Can be specified as a dict or a list:
+            - list style: [x_value_1, x_value_2, ...]
+            - dict style: {x_value_1: label_1, x_value_2: label_2, ...}
+    y_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific Y-axis values.
+        Can be specified as a dict or a list:
+            - list style: [y_value_1, y_value_2, ...]
+            - dict style: {y_value_1: label_1, y_value_2: label_2, ...}
     width : number or None
         Chart width in pixels or None for default. See also, use_container_width.
     height : number or None
@@ -768,34 +918,42 @@ def event_chart(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     pan_zoom : str or None
         Specify the method for panning and zooming the chart, if any. Allowed values:
-        - 'both': drag canvas to pan, use scroll with mouse to zoom.
-        - 'pan': drag canvas to pan.
-        - 'zoom': scroll with mouse to zoom.
-        - 'minimap': drag onto minimap to select viewport area.
-        - None: chart will not be pannable/zoomable.
+            - 'both': drag canvas to pan, use scroll with mouse to zoom.
+            - 'pan': drag canvas to pan.
+            - 'zoom': scroll with mouse to zoom.
+            - 'minimap': drag onto minimap to select viewport area.
+            - None: chart will not be pannable/zoomable.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
 
-    spec = _(
+    legend = _get_legend_dict(legend)
+
+    meta = _(
         data=data,
-        mark=_(type='tick', tooltip=True, thickness=thickness),
         width=width,
         height=height,
         title=title,
+    )
+
+    spec = _(
+        mark=_(type='tick', tooltip=True, thickness=thickness),
         encoding=_(
             x=_clean_encoding(data, x),
             y=_clean_encoding(data, y),
-            color=_clean_encoding(data, color, legend=_get_legend_dict(legend)),
-            size=_clean_encoding(data, size),
-            opacity=_clean_encoding(data, opacity),
+            color=_clean_encoding(data, color, legend=legend),
+            size=_clean_encoding(data, size, legend=legend),
+            opacity=_clean_encoding(data, opacity, legend=legend),
         ),
         selection=_get_selection(pan_zoom),
     )
+
+    spec = _add_annotations(spec, x_annot, y_annot)
+    spec.update(meta)
 
     if pan_zoom == 'minimap':
         spec = _add_minimap(spec, ['x'], 'bottom')
@@ -810,10 +968,12 @@ def time_hist(
         y_unit,
         color=None,
         aggregate='count',
+        x_annot=None,
+        y_annot=None,
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='bottom',
         pan_zoom=None,
         use_container_width=True,
     ):
@@ -840,9 +1000,19 @@ def time_hist(
         a column.
     aggregate : str or None
         The Vega-Lite aggregation operation to use for this histogram. Defaults to 'count'.
-        Common operations are 'cound', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
+        Common operations are 'count', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
         'valid', and 'missing'.
         See https://vega.github.io/vega-lite/docs/aggregate.html#ops.
+    x_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific X-axis values.
+        Can be specified as a dict or a list:
+            - list style: [x_value_1, x_value_2, ...]
+            - dict style: {x_value_1: label_1, x_value_2: label_2, ...}
+    y_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific Y-axis values.
+        Can be specified as a dict or a list:
+            - list style: [y_value_1, y_value_2, ...]
+            - dict style: {y_value_1: label_1, y_value_2: label_2, ...}
     width : number or None
         Chart width in pixels or None for default. See also, use_container_width.
     height : number or None
@@ -851,25 +1021,28 @@ def time_hist(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     pan_zoom : str or None
         Specify the method for panning and zooming the chart, if any. Allowed values:
-        - 'both': drag canvas to pan, use scroll with mouse to zoom.
-        - 'pan': drag canvas to pan.
-        - 'zoom': scroll with mouse to zoom.
-        - 'minimap': Not supported for histograms.
-        - None: chart will not be pannable/zoomable.
+            - 'both': drag canvas to pan, use scroll with mouse to zoom.
+            - 'pan': drag canvas to pan.
+            - 'zoom': scroll with mouse to zoom.
+            - 'minimap': Not supported for histograms.
+            - None: chart will not be pannable/zoomable.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
 
-    spec = _(
+    meta = _(
         data=data,
-        mark=_(type='rect', tooltip=True),
         width=width,
         height=height,
         title=title,
+    )
+
+    spec = _(
+        mark=_(type='rect', tooltip=True),
         encoding=_(
             x=_(field=date, type='ordinal', timeUnit=x_unit, title=None, axis=_(tickBand='extent')),
             y=_(field=date, type='ordinal', timeUnit=y_unit, title=None, axis=_(tickBand='extent')),
@@ -877,6 +1050,9 @@ def time_hist(
         ),
         selection=_get_selection(pan_zoom),
     )
+
+    spec = _add_annotations(spec, x_annot, y_annot)
+    spec.update(meta)
 
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
@@ -889,10 +1065,12 @@ def xy_hist(
         aggregate='count',
         x_bin=True,
         y_bin=True,
+        x_annot=None,
+        y_annot=None,
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='bottom',
         pan_zoom=None,
         use_container_width=True,
     ):
@@ -902,22 +1080,28 @@ def xy_hist(
     ----------
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     y : str or list of str or dict
         Column name to use for the y axis, or Vega-Lite dict for the y encoding.
         If a list of strings, draws several series on the same chart by melting your wide-format
         table into a long-format table behind the scenes. If your table is already in long-format,
         the way to draw multiple series is by using the color parameter instead.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     color : str or dict or None
         Column name to use for chart colors, or Vega-Lite dict for the color encoding.
         May be a literal value, like "#223344" or "green".
         If using aggregate is not None, this is the column that will be aggregated.
         None means the default color will be used, or that the aggregation operation does not require
         a column.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     aggregate : str or None
         The Vega-Lite aggregation operation to use for this histogram. Defaults to 'count'.
-        Common operations are 'cound', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
+        Common operations are 'count', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
         'valid', and 'missing'.
         See https://vega.github.io/vega-lite/docs/aggregate.html#ops.
     x_bin : dict or None
@@ -928,6 +1112,16 @@ def xy_hist(
         Allows you to customize the binning properties for the y axis.
         If None, uses the default binning properties.
         See https://vega.github.io/vega-lite/docs/bin.html#bin-parameters>
+    x_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific X-axis values.
+        Can be specified as a dict or a list:
+            - list style: [x_value_1, x_value_2, ...]
+            - dict style: {x_value_1: label_1, x_value_2: label_2, ...}
+    y_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific Y-axis values.
+        Can be specified as a dict or a list:
+            - list style: [y_value_1, y_value_2, ...]
+            - dict style: {y_value_1: label_1, y_value_2: label_2, ...}
     width : number or None
         Chart width in pixels or None for default. See also, use_container_width.
     height : number or None
@@ -936,25 +1130,28 @@ def xy_hist(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     pan_zoom : str or None
         Specify the method for panning and zooming the chart, if any. Allowed values:
-        - 'both': drag canvas to pan, use scroll with mouse to zoom.
-        - 'pan': drag canvas to pan.
-        - 'zoom': scroll with mouse to zoom.
-        - 'minimap': Not supported for histograms.
-        - None: chart will not be pannable/zoomable.
+            - 'both': drag canvas to pan, use scroll with mouse to zoom.
+            - 'pan': drag canvas to pan.
+            - 'zoom': scroll with mouse to zoom.
+            - 'minimap': Not supported for histograms.
+            - None: chart will not be pannable/zoomable.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
 
-    spec = _(
+    meta = _(
         data=data,
-        mark=_(type='rect', tooltip=True),
         width=width,
         height=height,
         title=title,
+    )
+
+    spec = _(
+        mark=_(type='rect', tooltip=True),
         encoding=_(
             x=_clean_encoding(data, x, bin=x_bin),
             y=_clean_encoding(data, y, bin=y_bin),
@@ -962,6 +1159,9 @@ def xy_hist(
         ),
         selection=_get_selection(pan_zoom),
     )
+
+    spec = _add_annotations(spec, x_annot, y_annot)
+    spec.update(meta)
 
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
@@ -972,10 +1172,12 @@ def hist(
         y=None,
         aggregate='count',
         bin=None,
+        x_annot=None,
+        y_annot=None,
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='bottom',
         pan_zoom=None,
         use_container_width=True,
     ):
@@ -985,20 +1187,34 @@ def hist(
     ----------
     x : str or dict
         Column name to use for the x axis, or Vega-Lite dict for the x encoding.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     y : str or dict or None
         Column to be aggregated. See aggregate parameter.
         None means the aggregation operation does not require a column.
-        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def
+        See https://vega.github.io/vega-lite/docs/encoding.html#position-datum-def.
+        Also supports Altair-style shorthands, like "foo:T" for temporal. See
+        https://altair-viz.github.io/user_guide/encoding.html#encoding-data-types.
     aggregate : str or None
         The Vega-Lite aggregation operation to use for this histogram. Defaults to 'count'.
-        Common operations are 'cound', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
+        Common operations are 'count', 'distinct', 'sum', 'mean', 'median', 'max', 'min',
         'valid', and 'missing'.
         See https://vega.github.io/vega-lite/docs/aggregate.html#ops.
     bin : dict or None
         Allows you to customize the binning properties for the histogram.
         If None, uses the default binning properties.
         See https://vega.github.io/vega-lite/docs/bin.html#bin-parameters>
+    x_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific X-axis values.
+        Can be specified as a dict or a list:
+            - list style: [x_value_1, x_value_2, ...]
+            - dict style: {x_value_1: label_1, x_value_2: label_2, ...}
+    y_annot : dict or list or None
+        Annotations to draw on top the chart, tied to specific Y-axis values.
+        Can be specified as a dict or a list:
+            - list style: [y_value_1, y_value_2, ...]
+            - dict style: {y_value_1: label_1, y_value_2: label_2, ...}
     width : number or None
         Chart width in pixels or None for default. See also, use_container_width.
     height : number or None
@@ -1007,31 +1223,37 @@ def hist(
         Chart title, or None for no title.
     legend : str or None
         Legend orientation: 'top', 'left', 'bottom', 'right', etc. See Vega-Lite docs
-        for more. If None, draws the legend at default location. To hide, use 'disable'.
+        for more. To hide, use None.
     pan_zoom : str or None
         Specify the method for panning and zooming the chart, if any. Allowed values:
-        - 'both': drag canvas to pan, use scroll with mouse to zoom.
-        - 'pan': drag canvas to pan.
-        - 'zoom': scroll with mouse to zoom.
-        - 'minimap': Not supported for histograms.
-        - None: chart will not be pannable/zoomable.
+            - 'both': drag canvas to pan, use scroll with mouse to zoom.
+            - 'pan': drag canvas to pan.
+            - 'zoom': scroll with mouse to zoom.
+            - 'minimap': Not supported for histograms.
+            - None: chart will not be pannable/zoomable.
     use_container_width : bool
         If True, sets the chart to use all available space. This takes precedence over the width
         parameter.
     """
 
-    spec = _(
+    meta = _(
         data=data,
-        mark=_(type='bar', tooltip=True),
         width=width,
         height=height,
         title=title,
+    )
+
+    spec = _(
+        mark=_(type='bar', tooltip=True),
         encoding=_(
             x=_clean_encoding(data, x, bin=bin or True),
             y=_clean_encoding(data, y, aggregate=aggregate),
         ),
         selection=_get_selection(pan_zoom),
     )
+
+    spec = _add_annotations(spec, x_annot, y_annot)
+    spec.update(meta)
 
     st.vega_lite_chart(spec, use_container_width=use_container_width)
 
@@ -1049,10 +1271,12 @@ def scatter_hist(
         width=None,
         height=None,
         title=None,
-        legend=None,
+        legend='bottom',
         pan_zoom=None,
         use_container_width=True,
     ):
+
+    legend = _get_legend_dict(legend)
 
     scatter_spec = _(
         mark=_(type='circle', tooltip=True),
@@ -1062,9 +1286,9 @@ def scatter_hist(
         encoding=_(
             x=_clean_encoding(data, x),
             y=_clean_encoding(data, y),
-            color=_clean_encoding(data, color, legend=_get_legend_dict(legend)),
-            size=_clean_encoding(data, size),
-            opacity=_clean_encoding(data, opacity),
+            color=_clean_encoding(data, color, legend=legend),
+            size=_clean_encoding(data, size, legend=legend),
+            opacity=_clean_encoding(data, opacity, legend=legend),
         ),
     )
 
