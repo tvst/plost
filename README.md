@@ -6,6 +6,11 @@ Because you've been writing _plots_ wrong all this time.
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/tvst/plost)
 
+## Our goal
+
+* What you need 99% of the time is insanely easy
+* The other 1% is impossible. Use Vega-Lite instead!
+
 ## Getting started
 
 ```
