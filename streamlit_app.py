@@ -2,8 +2,6 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plost
-from numpydoc.docscrape import NumpyDocString
-from docutils.core import publish_parts
 
 st.set_page_config(page_title='Plost', page_icon=':tomato:')
 
