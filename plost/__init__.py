@@ -1,4 +1,4 @@
-"""🍅 Plost
+"""Plost
 
 A deceptively simple plotting library for Streamlit.
 You've been writing *plots* wrong all this time!
