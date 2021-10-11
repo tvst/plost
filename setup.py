@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Plost",
-    version="0.2.2",
+    version="0.2.3",
     author="Thiago Teixeira",
     author_email="me@thiagot.com",
     description="A deceptively simple plotting library for Streamlit",
