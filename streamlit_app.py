@@ -483,7 +483,7 @@ shorthands](https://altair-viz.github.io/user_guide/encoding.html#encoding-data-
 
 ## Annotations
 
-# Use `x_annot` and `y_annot` to add vertical or horizontal lines with annotations:
+Use `x_annot` and `y_annot` to add vertical or horizontal lines with annotations:
 """
 
 with st.echo():
