@@ -508,7 +508,7 @@ def bar_chart(
         If None, no bars will be grouped.
     stack : bool or str
         True means areas of different colors will be stacked. False means there will be no
-        stacking, A Vega-Lite stack spec like 'normalized' is also accepted.
+        stacking, A Vega-Lite stack spec like 'normalized' or 'layered' is also accepted.
     direction : str
         Specifies the orientation of the bars in the chart: 'vertical' or 'horizontal'.
     width : number or None
