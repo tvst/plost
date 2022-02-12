@@ -4,7 +4,11 @@ A deceptively simple plotting library for [Streamlit](https://github.com/streaml
 
 Because you've been writing _plots_ wrong all this time.
 
+👇 **THE REAL README IS ACTUALLY HERE:**
+
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/tvst/plost)
+
+👆 You can find interactive examples, documentation, and much more in the app above.
 
 ## Our goal
 
@@ -95,9 +99,9 @@ a taste of other amazing things you can do!
 
 ## Juicy examples
 
-Check out [the sample app](https://share.streamlit.io/tvst/plost)!
+Check out [the documentation app](https://share.streamlit.io/tvst/plost)!
 
 
 ## Documentation
 
-This is in [the sample app](https://share.streamlit.io/tvst/plost) too!
+This is in [the documentation app](https://share.streamlit.io/tvst/plost) too!
