@@ -22,7 +22,7 @@ pip install plost
 
 ---
 
-## Basics
+## Intro
 
 Plost makes it easy to build common plots using the
 [Vega-Lite](https://vega.github.io/vega-lite/)
@@ -141,25 +141,19 @@ datasets = get_datasets()
 """
 ---
 
-## Datasets used for these examples
-
-Let's say you have some datasets like these:
+## Basic examples
 """
 
-dataset_name = st.selectbox("Datasets", datasets)
-st.write(datasets[dataset_name])
+with st.expander("Expand to see the datasets used in the examples below"):
 
-"Where the columns have the following types:"
+  dataset_name = st.selectbox("Datasets", datasets)
+  st.write(datasets[dataset_name])
 
-datasets[dataset_name].dtypes.to_dict(),
+  "Where the columns have the following types:"
 
-"""
-Now let's take this data and go _plost_ some _plosts_!
+  datasets[dataset_name].dtypes.to_dict(),
 
----
-
-## The basics
-"""
+"---"
 
 "### line_chart()"
 
