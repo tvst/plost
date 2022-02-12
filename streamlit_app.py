@@ -153,7 +153,7 @@ with st.expander("Expand to see the datasets used in the examples below"):
 
   datasets[dataset_name].dtypes.to_dict(),
 
-"---"
+""
 
 "### line_chart()"
 
