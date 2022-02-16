@@ -44,7 +44,7 @@ SUFFIX_TO_ENCODING = {
     ':O': 'ordinal',
     ':N': 'nominal',
     ':T': 'temporal',
-    ':Q': 'geojson',
+    ':G': 'geojson',
 }
 
 
