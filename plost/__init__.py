@@ -8,7 +8,7 @@ import numbers
 import streamlit as st
 
 # Syntactic sugar to make VegaLite more fun.
-_ = dict
+D = dict
 
 def _clean_encoding(data, enc, **kwargs):
     if isinstance(enc, str):
@@ -19,7 +19,7 @@ def _clean_encoding(data, enc, **kwargs):
 
     # Re-check because _guess_string_encoding_type can return a different type of enc.
     if isinstance(enc, str):
-        enc = _(
+        enc = D(
             field=enc,
             type=kwargs.get('type', enc_type),
         )
@@ -27,7 +27,7 @@ def _clean_encoding(data, enc, **kwargs):
         return enc
 
     elif isinstance(enc, numbers.Number):
-        enc = _(value=enc)
+        enc = D(value=enc)
         enc.update(kwargs)
         return enc
 
@@ -38,24 +38,36 @@ def _clean_encoding(data, enc, **kwargs):
     return kwargs
 
 
+# Accept Altair-style shorthands.
+SUFFIX_TO_ENCODING = {
+    ':Q': 'quantitative',
+    ':O': 'ordinal',
+    ':N': 'nominal',
+    ':T': 'temporal',
+    ':Q': 'geojson',
+}
+
+
+def _split_encoding_suffix(enc):
+    if isinstance(enc, str) and len(enc) > 2:
+        enc_suffix = enc[-2:]
+
+        if enc_suffix in SUFFIX_TO_ENCODING:
+            enc_prefix = enc[:-2]
+            return enc_prefix, SUFFIX_TO_ENCODING[enc_suffix]
+
+    return enc, None
+
 def _guess_string_encoding_type(data, enc):
-    # Accept Altair-style shorthands.
-    if enc.endswith(':Q'):
-        return enc[:-2], 'quantitative'
-    elif enc.endswith(':O'):
-        return enc[:-2], 'ordinal'
-    elif enc.endswith(':N'):
-        return enc[:-2], 'nominal'
-    elif enc.endswith(':T'):
-        return enc[:-2], 'temporal'
-    elif enc.endswith(':G'):
-        return enc[:-2], 'geojson'
+    enc_prefix, enc_type = _split_encoding_suffix(enc)
+    if enc_type:
+        return enc_prefix, enc_type
 
     try:
         dtype = data[enc].dtype.name
     except KeyError:
         # If it's not a column, then maybe it's a value.
-        return _(value=enc), None
+        return D(value=enc), None
 
     if dtype in {'object', 'string', 'bool', 'categorical'}:
         return enc, 'nominal'
@@ -85,7 +97,8 @@ def _maybe_melt(data, x, y, legend, *columns_to_keep):
 
     else:
         # Dataframe is in wide format. Lets melt it into long format for Vega-Lite.
-        id_vars = _as_list_like(x)
+        x_prefix, _ = _split_encoding_suffix(x)
+        id_vars = _as_list_like(x_prefix)
         value_vars = _as_list_like(y)
 
         id_vars = list(id_vars) + list(c for c in columns_to_keep if c in data.columns)
@@ -101,7 +114,7 @@ def _maybe_melt(data, x, y, legend, *columns_to_keep):
         # Don't show titles in axes since they're no longer the original names and make no sense to
         # the user.
         value_enc = _clean_encoding(data, VALUE_NAME, title=None)
-        variable_enc = _(field=VAR_NAME, title=None, legend=legend)
+        variable_enc = D(field=VAR_NAME, title=None, legend=legend)
         melted = True
 
     return melted, data, value_enc, variable_enc
@@ -121,7 +134,7 @@ def _get_selection(pan_zoom):
     if pan_zoom is None or pan_zoom == 'minimap':
         return None
 
-    selection = _(
+    selection = D(
         type='interval',
         bind='scales',
     )
@@ -132,13 +145,13 @@ def _get_selection(pan_zoom):
     if pan_zoom == 'zoom':
         selection['translate'] = False
 
-    return _(foo=selection)
+    return D(foo=selection)
 
 
 def _get_legend_dict(legend):
     if legend is None:
-        return _(disable=True)
-    return _(orient=legend)
+        return D(disable=True)
+    return D(orient=legend)
 
 
 _MINI_CHART_SIZE = 50
@@ -184,19 +197,19 @@ def _add_minimap(orig_spec, encodings, location, filter=False):
         minimap_spec['encoding']['y']['title'] = None
         minimap_spec['encoding']['y']['axis'] = None
 
-    minimap_spec['selection'] = _(
-        brush=_(type='interval', encodings=encodings),
+    minimap_spec['selection'] = D(
+        brush=D(type='interval', encodings=encodings),
     )
 
     if filter:
         # Filter data out according to the brush.
-        inner_spec['transform'] = [_(filter=_(selection='brush'))]
+        inner_spec['transform'] = [D(filter=D(selection='brush'))]
     else:
         # Change the scale of differen encodings according to the brush.
         for k in encodings:
             enc = inner_spec['encoding'][k]
             enc['scale'] = enc.get('scale', {})
-            enc['scale']['domain'] = _(selection='brush', encoding=k)
+            enc['scale']['domain'] = D(selection='brush', encoding=k)
             enc['title'] = None
 
     if location == 'right':
@@ -216,7 +229,7 @@ def _add_annotations(spec, x_annot, y_annot):
     _add_encoding_annotations(annotation_layers, 'y', y_annot)
 
     if annotation_layers:
-        spec = _(
+        spec = D(
             layer=[
                 spec,
                 *annotation_layers,
@@ -236,11 +249,11 @@ def _add_encoding_annotations(annotation_layers, encoding, annot):
         annot_iter = ((coord, "") for coord in _as_list_like(annot))
 
     for coord, label in annot_iter:
-        annotation_layers.append(_(
+        annotation_layers.append(D(
             mark='rule',
             encoding={
-                encoding: _(datum=coord),
-                "tooltip": _(value=f'{label} ({coord})'),
+                encoding: D(datum=coord),
+                "tooltip": D(value=f'{label} ({coord})'),
             },
         ))
 
@@ -324,16 +337,16 @@ def line_chart(
     if color:
         color_enc = _clean_encoding(data, color, legend=legend)
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
         title=title,
     )
 
-    spec = _(
-        mark=_(type='line', tooltip=True),
-        encoding=_(
+    spec = D(
+        mark=D(type='line', tooltip=True),
+        encoding=D(
             x=_clean_encoding(data, x),
             y=y_enc,
             color=color_enc,
@@ -441,16 +454,16 @@ def area_chart(
         else:
             y_enc['stack'] = stack
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
         title=title,
     )
 
-    spec = _(
-        mark=_(type='area', tooltip=True),
-        encoding=_(
+    spec = D(
+        mark=D(type='area', tooltip=True),
+        encoding=D(
             x=_clean_encoding(data, x),
             y=y_enc,
             color=color_enc,
@@ -568,16 +581,16 @@ def bar_chart(
         row_enc, column_enc = column_enc, row_enc
         use_container_width = True
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
         title=title,
     )
 
-    spec = _(
-        mark=_(type='bar', tooltip=True),
-        encoding=_(
+    spec = D(
+        mark=D(type='bar', tooltip=True),
+        encoding=D(
             x=x_enc,
             y=y_enc,
             color=color_enc,
@@ -686,16 +699,16 @@ def scatter_chart(
     legend = _get_legend_dict(legend)
     melted, data, y_enc, color_enc = _maybe_melt(data, x, y, legend, size, opacity)
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
         title=title,
     )
 
-    spec = _(
-        mark=_(type='circle', tooltip=True),
-        encoding=_(
+    spec = D(
+        mark=D(type='circle', tooltip=True),
+        encoding=D(
             x=_clean_encoding(data, x),
             y=y_enc,
             color=color_enc,
@@ -720,10 +733,10 @@ def _pie_spec(
         color,
         legend,
     ):
-    return _(
-        mark=_(type='arc', tooltip=True),
-        view=_(stroke=None),
-        encoding=_(
+    return D(
+        mark=D(type='arc', tooltip=True),
+        view=D(stroke=None),
+        encoding=D(
             theta=_clean_encoding(data, theta),
             color=_clean_encoding(data, color, title=None, legend=_get_legend_dict(legend)),
         ),
@@ -766,7 +779,7 @@ def pie_chart(
         parameter.
     """
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
@@ -821,7 +834,7 @@ def donut_chart(
         parameter.
     """
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
@@ -933,16 +946,16 @@ def event_chart(
 
     legend = _get_legend_dict(legend)
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
         title=title,
     )
 
-    spec = _(
-        mark=_(type='tick', tooltip=True, thickness=thickness),
-        encoding=_(
+    spec = D(
+        mark=D(type='tick', tooltip=True, thickness=thickness),
+        encoding=D(
             x=_clean_encoding(data, x),
             y=_clean_encoding(data, y),
             color=_clean_encoding(data, color, legend=legend),
@@ -1034,18 +1047,18 @@ def time_hist(
         parameter.
     """
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
         title=title,
     )
 
-    spec = _(
-        mark=_(type='rect', tooltip=True),
-        encoding=_(
-            x=_(field=date, type='ordinal', timeUnit=x_unit, title=None, axis=_(tickBand='extent')),
-            y=_(field=date, type='ordinal', timeUnit=y_unit, title=None, axis=_(tickBand='extent')),
+    spec = D(
+        mark=D(type='rect', tooltip=True),
+        encoding=D(
+            x=D(field=date, type='ordinal', timeUnit=x_unit, title=None, axis=D(tickBand='extent')),
+            y=D(field=date, type='ordinal', timeUnit=y_unit, title=None, axis=D(tickBand='extent')),
             color=_clean_encoding(data, color, aggregate=aggregate, legend=legend)
         ),
         selection=_get_selection(pan_zoom),
@@ -1143,16 +1156,16 @@ def xy_hist(
         parameter.
     """
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
         title=title,
     )
 
-    spec = _(
-        mark=_(type='rect', tooltip=True),
-        encoding=_(
+    spec = D(
+        mark=D(type='rect', tooltip=True),
+        encoding=D(
             x=_clean_encoding(data, x, bin=x_bin),
             y=_clean_encoding(data, y, bin=y_bin),
             color=_clean_encoding(data, color, aggregate=aggregate, legend=legend)
@@ -1236,16 +1249,16 @@ def hist(
         parameter.
     """
 
-    meta = _(
+    meta = D(
         data=data,
         width=width,
         height=height,
         title=title,
     )
 
-    spec = _(
-        mark=_(type='bar', tooltip=True),
-        encoding=_(
+    spec = D(
+        mark=D(type='bar', tooltip=True),
+        encoding=D(
             x=_clean_encoding(data, x, bin=bin or True),
             y=_clean_encoding(data, y, aggregate=aggregate),
         ),
@@ -1278,12 +1291,12 @@ def scatter_hist(
 
     legend = _get_legend_dict(legend)
 
-    scatter_spec = _(
-        mark=_(type='circle', tooltip=True),
+    scatter_spec = D(
+        mark=D(type='circle', tooltip=True),
         width=width,
         height=height,
         title=title,
-        encoding=_(
+        encoding=D(
             x=_clean_encoding(data, x),
             y=_clean_encoding(data, y),
             color=_clean_encoding(data, color, legend=legend),
@@ -1292,30 +1305,30 @@ def scatter_hist(
         ),
     )
 
-    x_hist_spec = _(
-        mark=_(type='bar', tooltip=True),
+    x_hist_spec = D(
+        mark=D(type='bar', tooltip=True),
         width=width,
         height=_MINI_CHART_SIZE,
-        encoding=_(
+        encoding=D(
             x=_clean_encoding(data, x, bin=x_bin or True, title=None, axis=None),
             y=_clean_encoding(data, y, aggregate=aggregate, title=None),
         ),
     )
 
-    y_hist_spec = _(
-        mark=_(type='bar', tooltip=True),
+    y_hist_spec = D(
+        mark=D(type='bar', tooltip=True),
         height=height,
         width=_MINI_CHART_SIZE,
-        encoding=_(
+        encoding=D(
             x=_clean_encoding(data, x, aggregate=aggregate, title=None),
             y=_clean_encoding(data, y, bin=y_bin or True, title=None, axis=None),
         ),
     )
 
-    spec = _(
+    spec = D(
         data=data,
         title=title,
-        vconcat=[x_hist_spec, _(hconcat=[scatter_spec, y_hist_spec])],
+        vconcat=[x_hist_spec, D(hconcat=[scatter_spec, y_hist_spec])],
     )
 
     st.vega_lite_chart(spec, use_container_width=use_container_width)
